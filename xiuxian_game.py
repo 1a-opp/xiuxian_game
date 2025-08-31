@@ -1859,7 +1859,7 @@ def show_backpack_view():
     player = st.session_state.player
 
     # 返回主界面按钮
-    if st.button("返回主界面", use_container_width=True):
+    if st.button("返回主界面", use_container_width=True, key="back_to_main_from_backpack"):
         st.session_state.current_view = "main"
         st.rerun()
 
@@ -1894,7 +1894,7 @@ def show_backpack_view():
                     with cols[i % 2]:
                         st.markdown(f"**{item['name']}** (x{player.inventory[item['name']]})")
                         st.write(item['description'])
-                        if st.button(f"使用 {item['name']}", use_container_width=True):
+                        if st.button(f"使用 {item['name']}", use_container_width=True, key=f"use_{item['name']}_{i}"):
                             success, msg = player.use_item(item["name"])
                             st.success(msg)
                             st.session_state.battle_log.append(msg)
@@ -1915,7 +1915,7 @@ def show_backpack_view():
             if eq:
                 st.markdown('<div class="status-card">', unsafe_allow_html=True)
                 st.text(str(eq))
-                if st.button(f"卸下 {eq.name}", use_container_width=True):
+                if st.button(f"卸下 {eq.name}", use_container_width=True, key=f"unequip_{eq_type}"):
                     # 卸下装备，放入背包
                     unequipped = player.equip_item(None)
                     player.equipment_inventory.append(unequipped)
@@ -1939,7 +1939,7 @@ def show_backpack_view():
                     st.text(str(eq))
                     col_a, col_b = st.columns(2)
                     with col_a:
-                        if st.button(f"装备 {eq.name}", use_container_width=True):
+                        if st.button(f"装备 {eq.name}", use_container_width=True, key=f"equip_{i}"):
                             # 装备物品，替换当前装备
                             current_eq = player.equip_item(eq)
                             # 从背包中移除
@@ -1953,7 +1953,7 @@ def show_backpack_view():
                             st.rerun()
                     with col_b:
                         sell_price = eq.get_sell_price()
-                        if st.button(f"出售 (${sell_price})", use_container_width=True):
+                        if st.button(f"出售 (${sell_price})", use_container_width=True, key=f"sell_{i}"):
                             # 出售装备
                             player.gold += sell_price
                             player.equipment_inventory.pop(i)
