@@ -1541,18 +1541,27 @@ def show_main_view():
     # 操作按钮（探索和区域移动）
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("探索区域", use_container_width=True):
-            if player.health <= 0:
-                st.error("你的生命值已耗尽，请先恢复！")
-            else:
-                monster = generate_monster()
-                st.session_state.current_monster = monster
-                st.session_state.battle_log = [f"你在区域 {st.session_state.current_area} 遇到了 {monster.name}！"]
-                # 重置战斗相关状态
-                player.skill_cooldown = 0  # 战斗开始时技能可用
-                player.battle_turn = 0
-                st.session_state.current_view = "battle"
-                st.rerun()
+        # 先判断是否遇到敌人（50%概率）
+        if random.random() < 0.5:  # 50%概率遇到敌人
+            # 这里可以添加遇到敌人的战斗逻辑
+            print("遇到了敌人！准备战斗！")
+        else:
+            # 没遇到敌人，可能获得装备或药水
+            # 生成装备的概率
+            if random.random() < 0.2:  # 20%概率获得装备
+                equipment = generate_equipment()
+                # 可以添加获得装备的提示逻辑
+                print(f"发现了装备：{equipment['name']}")
+
+            # 生成药水的概率
+            if random.random() < 0.1:  # 10%概率获得药水
+                potion_types = [item for item in SHOP_ITEMS if item["effect"] != "max_hp"]  # 不含生命上限药水
+                potion = random.choice(potion_types)
+                quantity = random.randint(1, 2)
+                potion.append((potion["name"], quantity))
+                player.inventory[potion["name"]] += quantity
+                # 可以添加获得药水的提示逻辑
+                print(f"发现了{quantity}瓶{potion['name']}")
     with col2:
         if st.button("前往下一个区域", use_container_width=True):
             # 检查是否是区域守护者且未被击败
