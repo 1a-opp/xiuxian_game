@@ -1541,27 +1541,42 @@ def show_main_view():
     # 操作按钮（探索和区域移动）
     col1, col2 = st.columns(2)
     with col1:
-        # 先判断是否遇到敌人（50%概率）
-        if random.random() < 0.5:  # 50%概率遇到敌人
-            # 这里可以添加遇到敌人的战斗逻辑
-            print("遇到了敌人！准备战斗！")
-        else:
-            # 没遇到敌人，可能获得装备或药水
-            # 生成装备的概率
-            if random.random() < 0.2:  # 20%概率获得装备
-                equipment = generate_equipment()
-                # 可以添加获得装备的提示逻辑
-                print(f"发现了装备：{equipment['name']}")
+        if st.button("探索区域", use_container_width=True):
+            # 50%概率遇到敌人
+            if random.random() < 0.5:
+                st.session_state.current_monster = generate_monster()
+                st.session_state.battle_log.append(
+                    f"你在第{st.session_state.current_area}区域遇到了{st.session_state.current_monster.name}！")
+                st.session_state.current_view = "battle"
+                st.rerun()
+            else:
+                # 没遇到敌人，可能获得装备或药水
+                found_items = []
 
-            # 生成药水的概率
-            if random.random() < 0.1:  # 10%概率获得药水
-                potion_types = [item for item in SHOP_ITEMS if item["effect"] != "max_hp"]  # 不含生命上限药水
-                potion = random.choice(potion_types)
-                quantity = random.randint(1, 2)
-                potion.append((potion["name"], quantity))
-                player.inventory[potion["name"]] += quantity
-                # 可以添加获得药水的提示逻辑
-                print(f"发现了{quantity}瓶{potion['name']}")
+                # 生成装备的概率
+                if random.random() < 0.2:  # 20%概率获得装备
+                    equipment = generate_equipment()
+                    player.equipment_inventory.append(equipment)
+                    found_items.append(f"发现了装备：{equipment.name}")
+
+                # 生成药水的概率
+                if random.random() < 0.1:  # 10%概率获得药水
+                    potion_types = [item for item in SHOP_ITEMS if item["effect"] != "max_hp"]
+                    potion = random.choice(potion_types)
+                    quantity = random.randint(1, 2)
+                    player.inventory[potion["name"]] += quantity
+                    found_items.append(f"发现了{quantity}瓶{potion['name']}")
+
+                if found_items:
+                    for item in found_items:
+                        st.session_state.battle_log.append(item)
+                    st.success("探索发现了一些物品！")
+                else:
+                    st.session_state.battle_log.append("探索了一番，没有发现任何东西")
+                    st.info("探索了一番，没有发现任何东西")
+                time.sleep(1)
+                st.rerun()
+
     with col2:
         if st.button("前往下一个区域", use_container_width=True):
             # 检查是否是区域守护者且未被击败
@@ -1573,6 +1588,8 @@ def show_main_view():
                 st.session_state.current_area += 1
                 st.session_state.battle_log.append(f"成功进入第{st.session_state.current_area}区域！这里的怪物更强大了！")
                 st.success(f"已前往区域 {st.session_state.current_area}！")
+                time.sleep(1)
+                st.rerun()
 
     # 快速使用药水
     st.subheader("快速使用")
