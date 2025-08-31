@@ -4,6 +4,7 @@ import time
 import json
 import os
 from datetime import datetime
+import urllib.parse
 
 # 页面配置 - 针对手机优化
 st.set_page_config(
@@ -508,12 +509,11 @@ class Player:
 
 
 class Monster:
-    def __init__(self, name, category, species, level, is_guardian=False):
+    def __init__(self, name, category, species, level):
         self.name = name
         self.category = category  # 基础种、精英种等
         self.species = species  # 仙术使、机械种等
         self.level = level
-        self.is_guardian = is_guardian  # 是否为区域守护者
 
         # 根据类别和等级设置属性
         category_multipliers = {
@@ -538,8 +538,8 @@ class Monster:
         # 特殊能力概率
         self.special_ability_chance = 0.1 + (multiplier - 1.0) * 0.05
 
-        # 特殊状态
-        self.next_attack_crit = False  # 用于"要害打击"效果
+        # 标记是否为区域守护者
+        self.is_guardian = "（区域守护者）" in name
 
     def is_alive(self):
         return self.health > 0
@@ -566,6 +566,63 @@ class Monster:
             f"防御力: {self.defense}"
 
 
+# 存档和读档功能
+def save_game():
+    """保存游戏数据到浏览器localStorage"""
+    if not st.session_state.player:
+        return False
+
+    # 准备要保存的数据
+    save_data = {
+        "player": st.session_state.player.to_dict(),
+        "current_area": st.session_state.current_area,
+        "timestamp": datetime.now().isoformat()
+    }
+
+    # 将数据转换为JSON字符串
+    save_json = json.dumps(save_data)
+
+    # 通过JavaScript将数据存入localStorage
+    st.markdown(
+        f"""
+        <script>
+            localStorage.setItem('xiuxian_save', JSON.stringify({json.dumps(save_json)}));
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.session_state.save_data = save_data
+    return True
+
+
+def load_game_from_localstorage():
+    """从浏览器localStorage加载存档"""
+    # 注入JavaScript读取localStorage并通过query params传递
+    st.markdown("""
+    <script>
+        const saveData = localStorage.getItem('xiuxian_save');
+        if (saveData) {
+            // 将存档数据通过URL参数传递给Streamlit
+            const url = new URL(window.location);
+            url.searchParams.set('save_data', encodeURIComponent(saveData));
+            window.history.replaceState(null, null, url);
+        }
+    </script>
+    """, unsafe_allow_html=True)
+
+    # 从URL参数获取存档数据
+    query_params = st.experimental_get_query_params()
+    if 'save_data' in query_params:
+        try:
+            save_json = urllib.parse.unquote(query_params['save_data'][0])
+            save_data = json.loads(save_json)
+            return save_data
+        except:
+            return None
+    return None
+
+
 # 游戏界面和逻辑控制
 def init_game():
     """初始化游戏数据（首次加载或刷新时调用）"""
@@ -580,7 +637,8 @@ def init_game():
     if 'current_view' not in st.session_state:
         st.session_state.current_view = "create"  # create/main/battle/shop/backpack
     if 'save_data' not in st.session_state:
-        st.session_state.save_data = None
+        # 尝试从localStorage加载存档
+        st.session_state.save_data = load_game_from_localstorage()
 
 
 def generate_monster():
@@ -610,15 +668,13 @@ def generate_monster():
     monster_name = random.choice(MONSTERS[category][species_type])
 
     # 区域守护者概率（每5个区域可能出现）
-    is_guardian = False
     if random.random() < 0.1 and area_level % 5 == 0:
-        is_guardian = True
         monster_name += "（区域守护者）"
 
     # 怪物等级基于区域等级，有一定浮动
     monster_level = max(1, int(area_level * (0.8 + random.random() * 0.4)))
 
-    return Monster(monster_name, category, species_type, monster_level, is_guardian)
+    return Monster(monster_name, category, species_type, monster_level)
 
 
 def generate_equipment():
@@ -692,6 +748,9 @@ def show_create_view():
 
         # 加载存档按钮
         if st.button("加载存档", use_container_width=True):
+            # 先尝试从localStorage加载最新存档
+            st.session_state.save_data = load_game_from_localstorage()
+
             if st.session_state.save_data:
                 try:
                     st.session_state.player = Player.from_dict(st.session_state.save_data["player"])
@@ -706,7 +765,7 @@ def show_create_view():
                 st.warning("没有找到存档数据")
 
     with col2:
-        st.image("https://picsum.photos/id/237/400/300", use_container_width=True,
+        st.image("https://picsum.photos/id/237/400/300", use_column_width=True,
                  caption="踏上修仙之路，斩妖除魔，突破境界")
 
 
@@ -915,6 +974,7 @@ def process_attack():
 
     # 怪物使用特殊能力
     special_ability = monster.use_special_ability()
+    special_attack = False
     if special_ability:
         st.session_state.battle_log.append(special_ability["message"])
         if special_ability["effect"] == "attack":
@@ -926,57 +986,84 @@ def process_attack():
             monster.health = min(monster.health + heal_amount, monster.base_health)
             st.session_state.battle_log.append(f"{monster.name}恢复了{heal_amount}点生命值！")
         elif special_ability["effect"] == "crit":
-            monster.next_attack_crit = True
+            special_attack = True
 
     # 玩家攻击
-    damage = max(1, player.get_total_attack() - monster.defense // 2)
-    if random.random() < player.get_critical_rate():
-        damage = int(damage * player.critical_damage)
-        st.session_state.battle_log.append(f"你对 {monster.name} 造成了 {damage} 点暴击伤害！")
-    else:
-        st.session_state.battle_log.append(f"你对 {monster.name} 造成了 {damage} 点伤害！")
-    monster.health -= damage
+    player_attack = player.get_total_attack()
+    damage_to_monster = max(1, player_attack - monster.defense // 2)
 
-    # 怪物死亡判定
+    # 检查是否暴击
+    if random.random() < player.get_critical_rate():
+        damage_to_monster = int(damage_to_monster * player.critical_damage)
+        st.session_state.battle_log.append(f"你对{monster.name}发动了暴击！造成了{damage_to_monster}点伤害！")
+    else:
+        st.session_state.battle_log.append(f"你对{monster.name}造成了{damage_to_monster}点伤害！")
+
+    monster.health -= damage_to_monster
+
+    # 检查怪物是否被击败
     if not monster.is_alive():
-        st.session_state.battle_log.append(f"你击败了 {monster.name}！")
+        st.session_state.battle_log.append(f"你成功击败了{monster.name}！")
+
+        # 获得经验
+        exp_messages = player.gain_experience(monster.experience_reward)
+        for msg in exp_messages:
+            st.session_state.battle_log.append(msg)
+
+        # 获得金币
         player.gold += monster.gold_reward
         st.session_state.battle_log.append(f"获得了{monster.gold_reward}金币！")
 
-        exp_messages = player.gain_experience(monster.experience_reward)
-        st.session_state.battle_log.extend(exp_messages)
-
-        # 有概率获得装备
-        if random.random() < 0.3 + (monster.level * 0.02):
+        # 随机掉落装备
+        if random.random() < 0.3 + (monster.level * 0.01):
             equipment = generate_equipment()
             if equipment:
                 player.equipment_inventory.append(equipment)
                 st.session_state.battle_log.append(f"获得了装备: {equipment.name}！")
 
+        # 随机掉落物品
+        if random.random() < 0.25:
+            item = random.choice(SHOP_ITEMS)
+            player.inventory[item["name"]] += 1
+            st.session_state.battle_log.append(f"获得了{item['name']}！")
+
+        # 战斗结束，返回主界面
         st.session_state.current_monster = None
+        st.session_state.current_view = "main"
         return
 
     # 怪物反击
-    if monster.next_attack_crit:
-        damage = int(monster.attack * 2)  # 要害打击必定暴击
-        st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点暴击伤害！")
-        monster.next_attack_crit = False  # 重置状态
+    monster_attack = monster.attack
+    damage_to_player = max(1, monster_attack - player.get_total_defense() // 3)
+
+    # 特殊攻击必定暴击
+    if special_attack:
+        damage_to_player = int(damage_to_player * 1.5)
+        st.session_state.battle_log.append(f"{monster.name}对你发动了要害打击！造成了{damage_to_player}点伤害！")
     else:
-        damage = max(1, monster.attack - player.get_total_defense() // 3)
-        st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点伤害！")
+        st.session_state.battle_log.append(f"{monster.name}对你造成了{damage_to_player}点伤害！")
 
-    player.health -= damage
+    player.health -= damage_to_player
 
-    # 玩家死亡判定
+    # 检查玩家是否被击败
     if not player.is_alive():
-        st.session_state.battle_log.append("你被击败了！损失部分金币！")
-        # 死亡惩罚：损失10%金币
+        st.session_state.battle_log.append("你被击败了！损失了部分金币和经验。")
+
+        # 惩罚机制
         lose_gold = max(10, int(player.gold * 0.1))
         player.gold = max(0, player.gold - lose_gold)
-        st.session_state.battle_log.append(f"损失了{lose_gold}金币！")
-        # 复活：恢复30%生命值
-        player.health = int(player.get_max_health() * 0.3)
+
+        lose_exp = max(0, int(player.experience * 0.05))
+        player.experience = max(0, player.experience - lose_exp)
+
+        st.session_state.battle_log.append(f"损失了{lose_gold}金币和{lose_exp}经验值！")
+
+        # 重置生命值为1
+        player.health = 1
+
+        # 战斗结束，返回主界面
         st.session_state.current_monster = None
+        st.session_state.current_view = "main"
 
 
 def show_shop_view():
@@ -994,26 +1081,28 @@ def show_shop_view():
         st.session_state.current_view = "main"
         st.rerun()
 
-    st.subheader(f"当前金币：{player.gold}")
+    # 显示当前金币
+    st.subheader(f"当前金币: {player.gold}")
 
+    # 商品列表
+    st.subheader("可购买物品")
     for item in SHOP_ITEMS:
-        with st.container():
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col1:
-                st.write(f"**{item['name']}**：{item['description']}")
-            with col2:
-                st.write(f"价格: {item['price']}")
-            with col3:
-                if st.button(f"购买", key=f"buy_{item['name']}", use_container_width=True):
-                    if player.gold >= item["price"]:
-                        player.gold -= item["price"]
-                        player.inventory[item["name"]] += 1
-                        st.success(f"成功购买 {item['name']}！")
-                        st.session_state.battle_log.append(f"购买了{item['name']}")
-                    else:
-                        st.error("金币不足，无法购买！")
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1:
+            st.write(f"**{item['name']}**：{item['description']}")
+        with col2:
+            st.write(f"价格: {item['price']}")
+        with col3:
+            if st.button("购买", key=f"buy_{item['name']}", use_container_width=True):
+                if player.gold >= item["price"]:
+                    player.gold -= item["price"]
+                    player.inventory[item["name"]] += 1
+                    st.session_state.battle_log.append(f"购买了{item['name']}")
+                    st.success(f"成功购买{item['name']}！")
                     time.sleep(1)
                     st.rerun()
+                else:
+                    st.error("金币不足，无法购买")
 
 
 def show_backpack_view():
@@ -1031,123 +1120,99 @@ def show_backpack_view():
         st.session_state.current_view = "main"
         st.rerun()
 
-    st.subheader(f"当前金币：{player.gold}")
-
-    # 标签页切换
-    tab1, tab2 = st.tabs(["装备", "药水"])
+    # 物品标签页
+    tab1, tab2 = st.tabs(["消耗品", "装备"])
 
     with tab1:
-        # 一键售卖按钮
-        if st.button("一键售卖劣质装备", use_container_width=True):
-            inferior_indices = []
-            for idx, equipment in enumerate(player.equipment_inventory):
-                current_equipped = player.equipped.get(equipment.type)
-                if equipment.is_inferior_to(current_equipped):
-                    inferior_indices.append(idx)
-
-            if not inferior_indices:
-                st.info("没有劣质装备可出售")
-            else:
-                # 按索引从大到小排序，避免删除时索引变化
-                inferior_indices.sort(reverse=True)
-                total_gold = 0
-                sold_items = []
-
-                for idx in inferior_indices:
-                    equipment = player.equipment_inventory[idx]
-                    price = equipment.get_sell_price()
-                    total_gold += price
-                    sold_items.append(equipment.name)
-                    del player.equipment_inventory[idx]
-
-                player.gold += total_gold
-                st.success(f"成功出售{len(sold_items)}件装备，获得{total_gold}金币！")
-                st.session_state.battle_log.append(f"出售了{len(sold_items)}件装备，获得{total_gold}金币")
-                time.sleep(1)
-                st.rerun()
-
-        st.subheader("已装备")
-        for eq_type, equipment in player.equipped.items():
-            if equipment:
-                st.text(
-                    f"{eq_type}: {equipment.name} (攻+{equipment.attack_bonus}, 防+{equipment.defense_bonus}, 血+{equipment.hp_bonus})")
-            else:
-                st.text(f"{eq_type}: 未装备")
-
-        st.subheader("装备背包")
-        if not player.equipment_inventory:
-            st.info("背包中没有装备")
-        else:
-            for i, equipment in enumerate(player.equipment_inventory):
-                col1, col2, col3 = st.columns([3, 1, 1])
-                with col1:
-                    st.write(
-                        f"{equipment.name} (等级: {equipment.level}) - 攻+{equipment.attack_bonus}, 防+{equipment.defense_bonus}, 血+{equipment.hp_bonus}")
-                with col2:
-                    if st.button("装备", key=f"equip_{i}", use_container_width=True):
-                        current_equipped = player.equip_item(equipment)
-                        del player.equipment_inventory[i]
-                        if current_equipped:
-                            player.equipment_inventory.append(current_equipped)
-                        st.success(f"已装备{equipment.name}！")
-                        st.session_state.battle_log.append(f"装备了{equipment.name}")
-                        time.sleep(1)
-                        st.rerun()
-                with col3:
-                    price = equipment.get_sell_price()
-                    if st.button(f"出售 (¥{price})", key=f"sell_{i}", use_container_width=True):
-                        player.gold += price
-                        del player.equipment_inventory[i]
-                        st.success(f"成功出售{equipment.name}，获得{price}金币！")
-                        st.session_state.battle_log.append(f"出售了{equipment.name}，获得{price}金币")
-                        time.sleep(1)
-                        st.rerun()
-
-    with tab2:
-        st.subheader("药水列表")
+        st.subheader("消耗品")
         has_items = False
         for item in SHOP_ITEMS:
             count = player.inventory.get(item["name"], 0)
             if count > 0:
                 has_items = True
-                col1, col2, col3 = st.columns([3, 1, 1])
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
                 with col1:
                     st.write(f"**{item['name']}**：{item['description']}")
                 with col2:
                     st.write(f"数量: {count}")
                 with col3:
-                    if st.button(f"使用", key=f"use_{item['name']}", use_container_width=True):
+                    if st.button("使用", key=f"use_{item['name']}", use_container_width=True):
                         success, msg = player.use_item(item["name"])
-                        if success:
-                            st.success(msg)
-                            st.session_state.battle_log.append(msg)
-                        else:
-                            st.error(msg)
+                        st.session_state.battle_log.append(msg)
+                        st.success(msg)
+                        time.sleep(1)
+                        st.rerun()
+                with col4:
+                    # 售价为购买价的一半
+                    sell_price = item["price"] // 2
+                    if st.button(f"出售({sell_price})", key=f"sell_{item['name']}", use_container_width=True):
+                        player.inventory[item["name"]] -= 1
+                        player.gold += sell_price
+                        st.session_state.battle_log.append(f"出售了{item['name']}，获得{sell_price}金币")
+                        st.success(f"成功出售{item['name']}，获得{sell_price}金币！")
                         time.sleep(1)
                         st.rerun()
 
         if not has_items:
-            st.info("背包中没有药水")
+            st.info("背包中没有消耗品")
+
+    with tab2:
+        st.subheader("装备")
+
+        # 当前装备
+        st.subheader("当前装备")
+        for eq_type in EQUIPMENT_TYPES:
+            eq = player.equipped[eq_type]
+            if eq:
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.write(
+                        f"**{eq_type}**: {eq.name} (攻击+{eq.attack_bonus}, 防御+{eq.defense_bonus}, 生命+{eq.hp_bonus})")
+                with col2:
+                    if st.button(f"卸下", key=f"unequip_{eq_type}", use_container_width=True):
+                        unequipped = player.equip_item(None)
+                        player.equipment_inventory.append(unequipped)
+                        st.success(f"已卸下{unequipped.name}")
+                        time.sleep(1)
+                        st.rerun()
+            else:
+                st.write(f"**{eq_type}**: 未装备")
+
+        # 装备库存
+        st.subheader("背包中的装备")
+        if player.equipment_inventory:
+            for i, eq in enumerate(player.equipment_inventory):
+                col1, col2, col3 = st.columns([4, 1, 1])
+                with col1:
+                    st.write(
+                        f"{eq.name} (等级: {eq.level}) - 攻击+{eq.attack_bonus}, 防御+{eq.defense_bonus}, 生命+{eq.hp_bonus}")
+                with col2:
+                    current_eq = player.equipped[eq.type]
+                    if current_eq:
+                        if eq.get_overall_score() > current_eq.get_overall_score():
+                            st.button(f"装备", key=f"equip_{i}", use_container_width=True)
+                        else:
+                            st.button(f"装备(较差)", key=f"equip_{i}", use_container_width=True, disabled=True)
+                    else:
+                        st.button(f"装备", key=f"equip_{i}", use_container_width=True)
+                with col3:
+                    sell_price = eq.get_sell_price()
+                    if st.button(f"出售({sell_price})", key=f"sell_eq_{i}", use_container_width=True):
+                        player.gold += sell_price
+                        del player.equipment_inventory[i]
+                        st.session_state.battle_log.append(f"出售了{eq.name}，获得{sell_price}金币")
+                        st.success(f"成功出售{eq.name}，获得{sell_price}金币！")
+                        time.sleep(1)
+                        st.rerun()
+        else:
+            st.info("背包中没有装备")
 
 
-def save_game():
-    """保存游戏数据"""
-    if 'player' in st.session_state and st.session_state.player:
-        data = {
-            "player": st.session_state.player.to_dict(),
-            "current_area": st.session_state.current_area,
-            "save_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        st.session_state.save_data = data
-        return True
-    return False
-
-
-# 主程序入口
-if __name__ == "__main__":
+# 主游戏循环
+def main():
     init_game()
 
-    # 根据当前视图显示对应界面
+    # 根据当前视图显示不同界面
     if st.session_state.current_view == "create":
         show_create_view()
     elif st.session_state.current_view == "main":
@@ -1158,3 +1223,7 @@ if __name__ == "__main__":
         show_shop_view()
     elif st.session_state.current_view == "backpack":
         show_backpack_view()
+
+
+if __name__ == "__main__":
+    main()
