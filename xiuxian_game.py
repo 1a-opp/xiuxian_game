@@ -612,7 +612,7 @@ def load_game_from_localstorage():
     """, unsafe_allow_html=True)
 
     # 从URL参数获取存档数据
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params()
     if 'save_data' in query_params:
         try:
             save_json = urllib.parse.unquote(query_params['save_data'][0])
@@ -765,7 +765,7 @@ def show_create_view():
                 st.warning("没有找到存档数据")
 
     with col2:
-        st.image("https://picsum.photos/id/237/400/300", use_column_width=True,
+        st.image("https://picsum.photos/id/237/400/300", use_container_width=True,
                  caption="踏上修仙之路，斩妖除魔，突破境界")
 
 
@@ -853,7 +853,7 @@ def show_main_view():
     reversed_logs = reversed(last_10_logs)
     # 渲染文本区域
     st.text_area("", value="\n".join(reversed_logs),
-                 disabled=True, use_container_width=True)
+                 disabled=True)
 
 
 def show_battle_view():
@@ -895,7 +895,7 @@ def show_battle_view():
     # 战斗日志
     st.subheader("战斗日志")
     st.text_area("", value="\n".join(st.session_state.battle_log),
-                 disabled=True, use_container_width=True)
+                 disabled=True)
 
     # 战斗操作按钮
     col1, col2 = st.columns(2)
