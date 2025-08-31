@@ -317,17 +317,17 @@ class Player:
         self.name = name
         self.realm_index = 0  # 当前境界索引
         self.realm_level = 1  # 境界内等级
-        self.base_health = 100
+        self.base_health = 300
         self.health = self.base_health
-        self.base_attack = 10
+        self.base_attack = 20
         self.base_defense = 5
-        self.critical_rate = 0.1  # 10%暴击率
+        self.critical_rate = 0.2  # 20%暴击率
         self.critical_damage = 1.5  # 150%暴击伤害
 
         self.experience = 0
         self.experience_to_next_level = self.calculate_exp_to_next_level()
 
-        self.gold = 1000
+        self.gold = 10000
         self.inventory = {item["name"]: 0 for item in SHOP_ITEMS}
 
         # 装备系统
