@@ -320,7 +320,7 @@ class Player:
         self.base_health = 300
         self.health = self.base_health
         self.base_attack = 20
-        self.base_defense = 5
+        self.base_defense = 15
         self.critical_rate = 0.2  # 20%暴击率
         self.critical_damage = 1.5  # 150%暴击伤害
 
@@ -944,7 +944,7 @@ class Monster:
 
         # 根据类别和等级设置属性（调整成长曲线以平衡游戏）
         category_multipliers = {
-            "基础种": 1.0,
+            "基础种": 0.8,
             "精英种": 1.8,
             "首领种": 3.0,
             "变异种": 4.5,
