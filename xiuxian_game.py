@@ -508,11 +508,12 @@ class Player:
 
 
 class Monster:
-    def __init__(self, name, category, species, level):
+    def __init__(self, name, category, species, level, is_guardian=False):
         self.name = name
         self.category = category  # 基础种、精英种等
         self.species = species  # 仙术使、机械种等
         self.level = level
+        self.is_guardian = is_guardian  # 是否为区域守护者
 
         # 根据类别和等级设置属性
         category_multipliers = {
@@ -537,8 +538,8 @@ class Monster:
         # 特殊能力概率
         self.special_ability_chance = 0.1 + (multiplier - 1.0) * 0.05
 
-        # 标记是否为区域守护者
-        self.is_guardian = "（区域守护者）" in name
+        # 特殊状态
+        self.next_attack_crit = False  # 用于"要害打击"效果
 
     def is_alive(self):
         return self.health > 0
@@ -609,13 +610,15 @@ def generate_monster():
     monster_name = random.choice(MONSTERS[category][species_type])
 
     # 区域守护者概率（每5个区域可能出现）
+    is_guardian = False
     if random.random() < 0.1 and area_level % 5 == 0:
+        is_guardian = True
         monster_name += "（区域守护者）"
 
     # 怪物等级基于区域等级，有一定浮动
     monster_level = max(1, int(area_level * (0.8 + random.random() * 0.4)))
 
-    return Monster(monster_name, category, species_type, monster_level)
+    return Monster(monster_name, category, species_type, monster_level, is_guardian)
 
 
 def generate_equipment():
@@ -784,7 +787,13 @@ def show_main_view():
 
     # 战斗日志
     st.subheader("事件日志")
-    st.text_area("", value="\n".join(reversed(st.session_state.battle_log[-10:])),
+    # 先安全获取 battle_log，确保是列表
+    logs = st.session_state.get("battle_log", [])
+    # 取最后10条并反转
+    last_10_logs = logs[-10:]
+    reversed_logs = reversed(last_10_logs)
+    # 渲染文本区域
+    st.text_area("", value="\n".join(reversed_logs),
                  disabled=True, use_container_width=True)
 
 
@@ -906,7 +915,6 @@ def process_attack():
 
     # 怪物使用特殊能力
     special_ability = monster.use_special_ability()
-    special_attack = False
     if special_ability:
         st.session_state.battle_log.append(special_ability["message"])
         if special_ability["effect"] == "attack":
@@ -918,7 +926,7 @@ def process_attack():
             monster.health = min(monster.health + heal_amount, monster.base_health)
             st.session_state.battle_log.append(f"{monster.name}恢复了{heal_amount}点生命值！")
         elif special_ability["effect"] == "crit":
-            special_attack = True
+            monster.next_attack_crit = True
 
     # 玩家攻击
     damage = max(1, player.get_total_attack() - monster.defense // 2)
@@ -949,9 +957,10 @@ def process_attack():
         return
 
     # 怪物反击
-    if special_attack:
+    if monster.next_attack_crit:
         damage = int(monster.attack * 2)  # 要害打击必定暴击
         st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点暴击伤害！")
+        monster.next_attack_crit = False  # 重置状态
     else:
         damage = max(1, monster.attack - player.get_total_defense() // 3)
         st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点伤害！")
