@@ -706,7 +706,7 @@ def show_create_view():
                 st.warning("没有找到存档数据")
 
     with col2:
-        st.image("https://picsum.photos/id/237/400/300", use_column_width=True,
+        st.image("https://picsum.photos/id/237/400/300", use_container_width=True,
                  caption="踏上修仙之路，斩妖除魔，突破境界")
 
 
