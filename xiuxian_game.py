@@ -49,6 +49,11 @@ st.markdown("""
     .stButton>button:active {
         transform: scale(0.98) !important;
     }
+    .stButton>button:disabled {
+        background-color: #cccccc !important;
+        color: #666666 !important;
+        transform: none !important;
+    }
 
     /* 文本样式优化 */
     .stText, .stMarkdown, .stHeading {
@@ -125,6 +130,15 @@ REALM_LEVELS = 10  # 每个大境界包含的小等级数
 
 EQUIPMENT_TYPES = ["武器", "头盔", "铠甲", "护腿", "手套", "鞋子"]
 
+# 武器技能定义
+WEAPON_SKILLS = {
+    "剑": {"name": "破空斩", "effect": "对敌人造成150%伤害，有30%概率触发暴击"},
+    "刀": {"name": "旋风斩", "effect": "对敌人造成130%伤害，自身恢复5%最大生命值"},
+    "斧": {"name": "巨力一击", "effect": "对敌人造成180%伤害，但自身受到10%伤害反噬"},
+    "杖": {"name": "元素冲击", "effect": "对敌人造成140%伤害，附加元素效果"},
+    "弓": {"name": "精准射击", "effect": "对敌人造成120%伤害，必定命中且忽略20%防御"}
+}
+
 MONSTERS = {
     "基础种": {
         "仙术使": ["铁铠熊霸", "赤鳞妖蛇", "腐毒史莱姆"],
@@ -163,6 +177,15 @@ MONSTERS = {
     }
 }
 
+# 怪物类型对应的伤害效果
+MONSTER_DAMAGE_EFFECTS = {
+    "仙术使": ["中毒", "眩晕"],
+    "机械种": [],
+    "元素使": ["火焰", "冰霜", "雷电"],
+    "阵营种": ["眩晕"],
+    "混合种": ["火焰", "冰霜", "雷电", "中毒", "眩晕"]
+}
+
 SHOP_ITEMS = [
     {"name": "生命上限药水", "effect": "max_hp", "value": 0.1, "price": 800,
      "description": "永久增加10%血量上限"},
@@ -179,7 +202,48 @@ SHOP_ITEMS = [
     {"name": "高级攻击药水", "effect": "attack_boost", "value": 0.5, "duration": 180,
      "price": 750, "description": "180秒内增加50%攻击力"},
     {"name": "暴击增益药水", "effect": "crit_boost", "value": 0.2, "duration": 180,
-     "price": 550, "description": "180秒内增加20%暴击率"}
+     "price": 550, "description": "180秒内增加20%暴击率"},
+    # 新增药水
+    {"name": "敏捷药剂", "effect": "agility_boost", "value": 0.3, "sub_value": 0.25, "duration": 180,
+     "price": 600, "description": "180秒内移动速度+30%、攻击速度+25%"},
+    {"name": "法力护盾药剂", "effect": "mana_shield", "value": 0.3, "duration": 60,
+     "price": 450, "description": "立即生成吸收30%最大生命值的护盾（持续60秒）"},
+    {"name": "元素抗性药剂", "effect": "element_resist", "value": 0.3, "duration": 180,
+     "price": 500, "description": "180秒内全元素抗性+30%"},
+    {"name": "技能急速药剂", "effect": "skill_haste", "value": 0.2, "duration": 180,
+     "price": 700, "description": "180秒内技能冷却时间减少20%"},
+    {"name": "闪避药剂", "effect": "dodge_boost", "value": 0.25, "duration": 180,
+     "price": 550, "description": "180秒内闪避率+25%"},
+    {"name": "生命偷取药剂", "effect": "life_steal", "value": 0.15, "duration": 180,
+     "price": 650, "description": "180秒内造成伤害的15%转化为生命"},
+    {"name": "元素穿透药剂", "effect": "element_penetration", "value": 0.2, "duration": 180,
+     "price": 600, "description": "180秒内忽视目标20%元素抗性"},
+    {"name": "护盾增效药剂", "effect": "shield_boost", "value": 0.5, "stack": 3, "duration": 300,
+     "price": 400, "description": "接下来的3次治疗效果提升50%"},
+    {"name": "火焰伤害药剂", "effect": "fire_damage", "value": 0.3, "duration": 180,
+     "price": 550, "description": "180秒内火焰伤害+30%"},
+    {"name": "冰霜伤害药剂", "effect": "frost_damage", "value": 0.3, "duration": 180,
+     "price": 550, "description": "180秒内冰霜伤害+30%"},
+    {"name": "雷电伤害药剂", "effect": "thunder_damage", "value": 0.3, "duration": 180,
+     "price": 550, "description": "180秒内雷电伤害+30%"},
+    {"name": "减伤药剂", "effect": "damage_reduction", "value": 0.2, "duration": 180,
+     "price": 750, "description": "180秒内受到的伤害减少20%"},
+    {"name": "反弹药剂", "effect": "damage_reflect", "value": 0.15, "duration": 180,
+     "price": 600, "description": "180秒内反弹15%受到的伤害"},
+    {"name": "中毒抵抗药剂", "effect": "poison_resist", "value": 1.0, "duration": 180,
+     "price": 300, "description": "180秒内免疫中毒效果"},
+    {"name": "眩晕抵抗药剂", "effect": "stun_resist", "value": 1.0, "duration": 180,
+     "price": 300, "description": "180秒内免疫眩晕效果"},
+    {"name": "隐身药剂", "effect": "invisibility", "value": 0.8, "sub_value": 0.2, "duration": 120,
+     "price": 600, "description": "隐身120秒（移动速度降低20%，有概率躲避敌人攻击）"},
+    {"name": "暴击伤害药剂", "effect": "crit_damage_boost", "value": 0.5, "duration": 180,
+     "price": 650, "description": "180秒内暴击伤害+50%"},
+    {"name": "全属性药剂", "effect": "all_stats", "value": 0.1, "duration": 180,
+     "price": 750, "description": "180秒内力量/血量/攻击/经验获取+10%"},
+    {"name": "经验药剂", "effect": "exp_boost", "value": 0.2, "duration": 1800,  # 30分钟=1800秒
+     "price": 1000, "description": "30分钟内经验获取+20%"},
+    {"name": "护盾持续药剂", "effect": "shield_duration", "value": 0.5, "stack": 3, "duration": 300,
+     "price": 450, "description": "接下来的3次护盾效果持续时间延长50%"}
 ]
 
 
@@ -192,6 +256,16 @@ class Equipment:
         self.defense_bonus = defense_bonus
         self.hp_bonus = hp_bonus
 
+        # 提取武器类型（如果是武器）
+        self.weapon_subtype = None
+        if equip_type == "武器":
+            for subtype in WEAPON_SKILLS.keys():
+                if subtype in name:
+                    self.weapon_subtype = subtype
+                    break
+            if not self.weapon_subtype:
+                self.weapon_subtype = random.choice(list(WEAPON_SKILLS.keys()))
+
     def to_dict(self):
         return {
             "name": self.name,
@@ -199,12 +273,13 @@ class Equipment:
             "level": self.level,
             "attack_bonus": self.attack_bonus,
             "defense_bonus": self.defense_bonus,
-            "hp_bonus": self.hp_bonus
+            "hp_bonus": self.hp_bonus,
+            "weapon_subtype": self.weapon_subtype
         }
 
     @classmethod
     def from_dict(cls, data):
-        return cls(
+        eq = cls(
             data["name"],
             data["type"],
             data["level"],
@@ -212,6 +287,8 @@ class Equipment:
             data["defense_bonus"],
             data["hp_bonus"]
         )
+        eq.weapon_subtype = data.get("weapon_subtype")
+        return eq
 
     def get_sell_price(self):
         """计算装备出售价格"""
@@ -228,7 +305,11 @@ class Equipment:
         return self.get_overall_score() < other_equipment.get_overall_score() * threshold
 
     def __str__(self):
-        return f"{self.name} (等级: {self.level}) - 攻击+{self.attack_bonus}, 防御+{self.defense_bonus}, 生命+{self.hp_bonus}"
+        base_str = f"{self.name} (等级: {self.level}) - 攻击+{self.attack_bonus}, 防御+{self.defense_bonus}, 生命+{self.hp_bonus}"
+        if self.type == "武器" and self.weapon_subtype:
+            skill = WEAPON_SKILLS[self.weapon_subtype]
+            base_str += f"\n技能: {skill['name']} - {skill['effect']}"
+        return base_str
 
 
 class Player:
@@ -253,12 +334,45 @@ class Player:
         self.equipped = {eq_type: None for eq_type in EQUIPMENT_TYPES}
         self.equipment_inventory = []
 
-        # 状态增益
+        # 状态增益与减益
         self.buffs = {
             "attack_boost": {"value": 0, "end_time": None},
             "defense_boost": {"value": 0, "end_time": None},
-            "crit_boost": {"value": 0, "end_time": None}
+            "crit_boost": {"value": 0, "end_time": None},
+            "agility_boost": {"value": 0, "sub_value": 0, "end_time": None},  # 移动速度+攻击速度
+            "mana_shield": {"value": 0, "end_time": None},  # 护盾值
+            "element_resist": {"value": 0, "end_time": None},
+            "skill_haste": {"value": 0, "end_time": None},  # 技能冷却减少
+            "dodge_boost": {"value": 0, "end_time": None},
+            "life_steal": {"value": 0, "end_time": None},
+            "element_penetration": {"value": 0, "end_time": None},
+            "shield_boost": {"value": 0, "stack": 0, "end_time": None},
+            "fire_damage": {"value": 0, "end_time": None},
+            "frost_damage": {"value": 0, "end_time": None},
+            "thunder_damage": {"value": 0, "end_time": None},
+            "damage_reduction": {"value": 0, "end_time": None},
+            "damage_reflect": {"value": 0, "end_time": None},
+            "poison_resist": {"value": 0, "end_time": None},
+            "stun_resist": {"value": 0, "end_time": None},
+            "invisibility": {"value": 0, "sub_value": 0, "end_time": None},  # 闪避概率+移动速度降低
+            "crit_damage_boost": {"value": 0, "end_time": None},
+            "all_stats": {"value": 0, "end_time": None},
+            "exp_boost": {"value": 0, "end_time": None},
+            "shield_duration": {"value": 0, "stack": 0, "end_time": None}
         }
+
+        # 减益效果
+        self.debuffs = {
+            "poisoned": {"duration": 0, "damage": 0},  # 中毒
+            "stunned": {"duration": 0},  # 眩晕
+            "burning": {"duration": 0, "damage": 0},  # 火焰
+            "frozen": {"duration": 0, "slow": 0},  # 冰霜减速
+            "shocked": {"duration": 0, "chance": 0}  # 雷电暴击加成
+        }
+
+        # 技能冷却
+        self.skill_cooldown = 0  # 剩余冷却回合数
+        self.battle_turn = 0  # 当前战斗回合数
 
     def get_current_realm(self):
         return REALMS[self.realm_index]
@@ -277,6 +391,9 @@ class Player:
         current_time = time.time()
         if self.buffs["attack_boost"]["end_time"] and current_time < self.buffs["attack_boost"]["end_time"]:
             total *= (1 + self.buffs["attack_boost"]["value"])
+        # 全属性加成
+        if self.buffs["all_stats"]["end_time"] and current_time < self.buffs["all_stats"]["end_time"]:
+            total *= (1 + self.buffs["all_stats"]["value"])
         return int(total)
 
     def get_total_defense(self):
@@ -289,6 +406,9 @@ class Player:
         current_time = time.time()
         if self.buffs["defense_boost"]["end_time"] and current_time < self.buffs["defense_boost"]["end_time"]:
             total *= (1 + self.buffs["defense_boost"]["value"])
+        # 全属性加成
+        if self.buffs["all_stats"]["end_time"] and current_time < self.buffs["all_stats"]["end_time"]:
+            total *= (1 + self.buffs["all_stats"]["value"])
         return int(total)
 
     def get_max_health(self):
@@ -297,6 +417,10 @@ class Player:
         for eq in self.equipped.values():
             if eq:
                 total += eq.hp_bonus
+        # 全属性加成
+        current_time = time.time()
+        if self.buffs["all_stats"]["end_time"] and current_time < self.buffs["all_stats"]["end_time"]:
+            total *= (1 + self.buffs["all_stats"]["value"])
         return int(total)
 
     def get_critical_rate(self):
@@ -304,24 +428,90 @@ class Player:
         current_time = time.time()
         if self.buffs["crit_boost"]["end_time"] and current_time < self.buffs["crit_boost"]["end_time"]:
             rate += self.buffs["crit_boost"]["value"]
+        # 雷电减益加成
+        if self.debuffs["shocked"]["duration"] > 0:
+            rate += self.debuffs["shocked"]["chance"]
         return min(rate, 1.0)  # 最大100%暴击率
+
+    def get_critical_damage(self):
+        damage = self.critical_damage
+        current_time = time.time()
+        if self.buffs["crit_damage_boost"]["end_time"] and current_time < self.buffs["crit_damage_boost"]["end_time"]:
+            damage *= (1 + self.buffs["crit_damage_boost"]["value"])
+        return damage
+
+    def get_dodge_chance(self):
+        current_time = time.time()
+        dodge = 0
+        if self.buffs["dodge_boost"]["end_time"] and current_time < self.buffs["dodge_boost"]["end_time"]:
+            dodge += self.buffs["dodge_boost"]["value"]
+        if self.buffs["invisibility"]["end_time"] and current_time < self.buffs["invisibility"]["end_time"]:
+            dodge += self.buffs["invisibility"]["value"]
+        return min(dodge, 1.0)
 
     def clean_expired_buffs(self):
         """清理过期的增益效果"""
         current_time = time.time()
         for buff_type in self.buffs:
-            if self.buffs[buff_type]["end_time"] and current_time >= self.buffs[buff_type]["end_time"]:
-                self.buffs[buff_type] = {"value": 0, "end_time": None}
+            buff = self.buffs[buff_type]
+            if "end_time" in buff and buff["end_time"] and current_time >= buff["end_time"]:
+                if buff_type in ["shield_boost", "shield_duration"]:
+                    self.buffs[buff_type] = {"value": 0, "stack": 0, "end_time": None}
+                elif buff_type in ["agility_boost", "invisibility"]:
+                    self.buffs[buff_type] = {"value": 0, "sub_value": 0, "end_time": None}
+                else:
+                    self.buffs[buff_type] = {"value": 0, "end_time": None}
+
+    def update_debuffs(self, battle_log):
+        """更新减益效果，每回合生效"""
+        current_time = time.time()
+        messages = []
+
+        # 处理中毒
+        if self.debuffs["poisoned"]["duration"] > 0:
+            if not (self.buffs["poison_resist"]["end_time"] and current_time < self.buffs["poison_resist"]["end_time"]):
+                self.health -= self.debuffs["poisoned"]["damage"]
+                messages.append(f"你受到了{self.debuffs['poisoned']['damage']}点中毒伤害！")
+            self.debuffs["poisoned"]["duration"] -= 1
+
+        # 处理燃烧
+        if self.debuffs["burning"]["duration"] > 0:
+            self.health -= self.debuffs["burning"]["damage"]
+            messages.append(f"你受到了{self.debuffs['burning']['damage']}点火焰伤害！")
+            self.debuffs["burning"]["duration"] -= 1
+
+        # 处理眩晕减少1回合
+        if self.debuffs["stunned"]["duration"] > 0:
+            self.debuffs["stunned"]["duration"] -= 1
+            if self.debuffs["stunned"]["duration"] == 0:
+                messages.append("你从眩晕中恢复了！")
+
+        # 处理冰冻减速减少1回合
+        if self.debuffs["frozen"]["duration"] > 0:
+            self.debuffs["frozen"]["duration"] -= 1
+            if self.debuffs["frozen"]["duration"] == 0:
+                messages.append("你从冰冻中恢复了！")
+
+        # 处理雷电效果减少1回合
+        if self.debuffs["shocked"]["duration"] > 0:
+            self.debuffs["shocked"]["duration"] -= 1
+
+        # 确保血量可以为负（允许玩家死亡血量为负）
+        self.health = self.health  # 不再限制为0以上
+
+        battle_log.extend(messages)
+        return messages
 
     def level_up(self):
-        # 提升境界内等级
+        # 提升境界内等级，降低后期属性增长幅度以平衡游戏
         self.realm_level += 1
         self.experience -= self.experience_to_next_level
 
-        # 提升基础属性
-        self.base_health += 20
-        self.base_attack += 5
-        self.base_defense += 3
+        # 提升基础属性（前期增长较快，后期放缓）
+        level_factor = min(1.0, self.realm_level / 20)  # 后期增长放缓
+        self.base_health += int(20 * level_factor * (1 + self.realm_index * 0.2))
+        self.base_attack += int(5 * level_factor * (1 + self.realm_index * 0.25))
+        self.base_defense += int(3 * level_factor * (1 + self.realm_index * 0.2))
 
         # 恢复全部生命值
         self.health = self.get_max_health()
@@ -337,10 +527,10 @@ class Player:
             self.realm_index += 1
             self.realm_level = 1
 
-            # 大境界提升，属性大幅提升
-            self.base_health = int(self.base_health * 1.5)
-            self.base_attack = int(self.base_attack * 1.8)
-            self.base_defense = int(self.base_defense * 1.6)
+            # 大境界提升，属性提升（降低幅度以平衡）
+            self.base_health = int(self.base_health * 1.3)  # 原1.5
+            self.base_attack = int(self.base_attack * 1.5)  # 原1.8
+            self.base_defense = int(self.base_defense * 1.4)  # 原1.6
 
             # 恢复全部生命值
             self.health = self.get_max_health()
@@ -354,6 +544,13 @@ class Player:
             return "已经达到最高境界！"
 
     def gain_experience(self, amount):
+        # 应用经验加成
+        current_time = time.time()
+        if self.buffs["exp_boost"]["end_time"] and current_time < self.buffs["exp_boost"]["end_time"]:
+            amount = int(amount * (1 + self.buffs["exp_boost"]["value"]))
+        if self.buffs["all_stats"]["end_time"] and current_time < self.buffs["all_stats"]["end_time"]:
+            amount = int(amount * (1 + self.buffs["all_stats"]["value"]))
+
         self.experience += amount
         messages = []
 
@@ -379,6 +576,7 @@ class Player:
             return False, "物品数量不足"
 
         self.inventory[item_name] -= 1
+        current_time = time.time()
 
         for item in SHOP_ITEMS:
             if item["name"] == item_name:
@@ -389,20 +587,90 @@ class Player:
 
                 elif item["effect"] == "heal":
                     heal_amount = int(self.get_max_health() * item["value"])
+                    # 应用护盾增效
+                    if self.buffs["shield_boost"]["stack"] > 0 and self.buffs["shield_boost"][
+                        "end_time"] and current_time < self.buffs["shield_boost"]["end_time"]:
+                        heal_amount = int(heal_amount * (1 + self.buffs["shield_boost"]["value"]))
+                        self.buffs["shield_boost"]["stack"] -= 1
                     self.health = min(self.health + heal_amount, self.get_max_health())
                     return True, f"使用了{item_name}，恢复了{heal_amount}点生命值！"
 
                 elif item["effect"] == "full_heal":
-                    self.health = self.get_max_health()
+                    full_heal = self.get_max_health()
+                    # 应用护盾增效
+                    if self.buffs["shield_boost"]["stack"] > 0 and self.buffs["shield_boost"][
+                        "end_time"] and current_time < self.buffs["shield_boost"]["end_time"]:
+                        full_heal = int(full_heal * (1 + self.buffs["shield_boost"]["value"]))
+                        self.buffs["shield_boost"]["stack"] -= 1
+                    self.health = min(full_heal, self.get_max_health())
                     return True, f"使用了{item_name}，生命值完全恢复！"
 
-                elif item["effect"] in ["attack_boost", "defense_boost", "crit_boost"]:
-                    end_time = time.time() + item["duration"]
+                elif item["effect"] in ["attack_boost", "defense_boost", "crit_boost",
+                                        "element_resist", "skill_haste", "dodge_boost",
+                                        "life_steal", "element_penetration", "fire_damage",
+                                        "frost_damage", "thunder_damage", "damage_reduction",
+                                        "damage_reflect", "poison_resist", "stun_resist",
+                                        "crit_damage_boost", "all_stats", "exp_boost"]:
+                    # 处理可叠加持续时间的buff
+                    end_time = current_time + item["duration"]
+                    current_buff = self.buffs[item["effect"]]
+
+                    # 如果已有该buff且未过期，则延长时间
+                    if current_buff["end_time"] and current_time < current_buff["end_time"]:
+                        end_time = current_buff["end_time"] + item["duration"]
+
                     self.buffs[item["effect"]] = {
                         "value": item["value"],
                         "end_time": end_time
                     }
-                    return True, f"使用了{item_name}，{int(item['value'] * 100)}%{item['description'].split('增加')[1]}，持续{int(item['duration'])}秒！"
+                    return True, f"使用了{item_name}，{item['description']}！"
+
+                elif item["effect"] in ["agility_boost", "invisibility"]:
+                    end_time = current_time + item["duration"]
+                    current_buff = self.buffs[item["effect"]]
+
+                    if current_buff["end_time"] and current_time < current_buff["end_time"]:
+                        end_time = current_buff["end_time"] + item["duration"]
+
+                    self.buffs[item["effect"]] = {
+                        "value": item["value"],
+                        "sub_value": item["sub_value"],
+                        "end_time": end_time
+                    }
+                    return True, f"使用了{item_name}，{item['description']}！"
+
+                elif item["effect"] == "mana_shield":
+                    shield_value = int(self.get_max_health() * item["value"])
+                    end_time = current_time + item["duration"]
+
+                    # 应用护盾持续时间加成
+                    if self.buffs["shield_duration"]["stack"] > 0 and self.buffs["shield_duration"][
+                        "end_time"] and current_time < self.buffs["shield_duration"]["end_time"]:
+                        end_time = current_time + item["duration"] * (1 + self.buffs["shield_duration"]["value"])
+                        self.buffs["shield_duration"]["stack"] -= 1
+
+                    self.buffs["mana_shield"] = {
+                        "value": shield_value,
+                        "end_time": end_time
+                    }
+                    return True, f"使用了{item_name}，生成了{shield_value}点护盾！"
+
+                elif item["effect"] in ["shield_boost", "shield_duration"]:
+                    end_time = current_time + item["duration"]
+                    current_buff = self.buffs[item["effect"]]
+
+                    if current_buff["end_time"] and current_time < current_buff["end_time"]:
+                        end_time = current_buff["end_time"] + item["duration"]
+                        stack = current_buff["stack"] + item["stack"]
+                    else:
+                        stack = item["stack"]
+
+                    self.buffs[item["effect"]] = {
+                        "value": item["value"],
+                        "stack": stack,
+                        "end_time": end_time
+                    }
+                    return True, f"使用了{item_name}，{item['description']}！"
 
         return False, "未知物品"
 
@@ -415,13 +683,106 @@ class Player:
     def is_alive(self):
         return self.health > 0
 
+    def use_skill_attack(self, monster):
+        """使用技能攻击"""
+        if self.skill_cooldown > 0:
+            return False, "技能正在冷却中"
+
+        # 获取当前装备的武器
+        weapon = self.equipped.get("武器")
+        weapon_type = weapon.weapon_subtype if weapon and weapon.weapon_subtype else "剑"
+        skill = WEAPON_SKILLS[weapon_type]
+
+        # 计算技能冷却时间（考虑技能急速）
+        current_time = time.time()
+        base_cooldown = 3
+        if self.buffs["skill_haste"]["end_time"] and current_time < self.buffs["skill_haste"]["end_time"]:
+            base_cooldown = int(base_cooldown * (1 - self.buffs["skill_haste"]["value"]))
+        self.skill_cooldown = max(1, base_cooldown)
+
+        # 基础伤害
+        damage = self.get_total_attack() - monster.defense // 2
+        damage = max(1, damage)
+
+        # 应用元素伤害加成
+        if weapon_type == "杖":  # 杖默认是元素伤害
+            element_type = random.choice(["fire", "frost", "thunder"])
+            if element_type == "fire" and self.buffs["fire_damage"]["end_time"] and current_time < \
+                    self.buffs["fire_damage"]["end_time"]:
+                damage = int(damage * (1 + self.buffs["fire_damage"]["value"]))
+            elif element_type == "frost" and self.buffs["frost_damage"]["end_time"] and current_time < \
+                    self.buffs["frost_damage"]["end_time"]:
+                damage = int(damage * (1 + self.buffs["frost_damage"]["value"]))
+            elif element_type == "thunder" and self.buffs["thunder_damage"]["end_time"] and current_time < \
+                    self.buffs["thunder_damage"]["end_time"]:
+                damage = int(damage * (1 + self.buffs["thunder_damage"]["value"]))
+
+        # 技能特殊效果
+        messages = [f"你使用了{skill['name']}！{skill['effect']}"]
+        critical = False
+
+        if weapon_type == "剑":
+            # 破空斩：150%伤害，30%暴击
+            damage = int(damage * 1.5)
+            if random.random() < 0.3:
+                critical = True
+
+        elif weapon_type == "刀":
+            # 旋风斩：130%伤害，恢复5%生命
+            damage = int(damage * 1.3)
+            heal = int(self.get_max_health() * 0.05)
+            self.health = min(self.health + heal, self.get_max_health())
+            messages.append(f"你恢复了{heal}点生命值！")
+
+        elif weapon_type == "斧":
+            # 巨力一击：180%伤害，10%反噬
+            damage = int(damage * 1.8)
+            reflect_damage = int(damage * 0.1)
+            self.health = self.health - reflect_damage  # 允许生命值变为负数
+            messages.append(f"你受到了{reflect_damage}点反噬伤害！")
+
+        elif weapon_type == "杖":
+            # 元素冲击：140%伤害，附加元素效果
+            damage = int(damage * 1.4)
+            if element_type == "fire":
+                monster.health -= int(damage * 0.2)  # 持续伤害
+                messages.append(f"{monster.name}被点燃，将持续受到伤害！")
+            elif element_type == "frost":
+                messages.append(f"{monster.name}被冰冻，行动迟缓！")
+            elif element_type == "thunder":
+                damage = int(damage * 1.2)  # 额外伤害
+                messages.append(f"{monster.name}受到了额外的雷电伤害！")
+
+        elif weapon_type == "弓":
+            # 精准射击：120%伤害，忽略20%防御
+            damage = int(damage * 1.2)
+
+        # 处理暴击
+        if not critical and random.random() < self.get_critical_rate():
+            critical = True
+            damage = int(damage * self.get_critical_damage())
+            messages.append("暴击！造成了额外伤害！")
+
+        # 应用生命偷取
+        current_time = time.time()
+        if self.buffs["life_steal"]["end_time"] and current_time < self.buffs["life_steal"]["end_time"]:
+            steal = int(damage * self.buffs["life_steal"]["value"])
+            self.health = min(self.health + steal, self.get_max_health())
+            messages.append(f"你偷取了{steal}点生命值！")
+
+        # 对怪物造成伤害
+        monster.health = max(0, monster.health - damage)
+        messages.append(f"你对{monster.name}造成了{damage}点伤害！")
+
+        return True, messages
+
     def to_dict(self):
         return {
             "name": self.name,
             "realm_index": self.realm_index,
             "realm_level": self.realm_level,
             "base_health": self.base_health,
-            "health": self.health,
+            "health": self.health,  # 允许保存负值
             "base_attack": self.base_attack,
             "base_defense": self.base_defense,
             "critical_rate": self.critical_rate,
@@ -432,7 +793,10 @@ class Player:
             "inventory": self.inventory,
             "equipped": {k: v.to_dict() if v else None for k, v in self.equipped.items()},
             "equipment_inventory": [eq.to_dict() for eq in self.equipment_inventory],
-            "buffs": self.buffs
+            "buffs": self.buffs,
+            "debuffs": self.debuffs,
+            "skill_cooldown": self.skill_cooldown,
+            "battle_turn": self.battle_turn
         }
 
     @classmethod
@@ -441,7 +805,7 @@ class Player:
         player.realm_index = data["realm_index"]
         player.realm_level = data["realm_level"]
         player.base_health = data["base_health"]
-        player.health = data["health"]
+        player.health = data["health"]  # 允许负值
         player.base_attack = data["base_attack"]
         player.base_defense = data["base_defense"]
         player.critical_rate = data["critical_rate"]
@@ -470,8 +834,42 @@ class Player:
         player.buffs = data.get("buffs", {
             "attack_boost": {"value": 0, "end_time": None},
             "defense_boost": {"value": 0, "end_time": None},
-            "crit_boost": {"value": 0, "end_time": None}
+            "crit_boost": {"value": 0, "end_time": None},
+            "agility_boost": {"value": 0, "sub_value": 0, "end_time": None},
+            "mana_shield": {"value": 0, "end_time": None},
+            "element_resist": {"value": 0, "end_time": None},
+            "skill_haste": {"value": 0, "end_time": None},
+            "dodge_boost": {"value": 0, "end_time": None},
+            "life_steal": {"value": 0, "end_time": None},
+            "element_penetration": {"value": 0, "end_time": None},
+            "shield_boost": {"value": 0, "stack": 0, "end_time": None},
+            "fire_damage": {"value": 0, "end_time": None},
+            "frost_damage": {"value": 0, "end_time": None},
+            "thunder_damage": {"value": 0, "end_time": None},
+            "damage_reduction": {"value": 0, "end_time": None},
+            "damage_reflect": {"value": 0, "end_time": None},
+            "poison_resist": {"value": 0, "end_time": None},
+            "stun_resist": {"value": 0, "end_time": None},
+            "invisibility": {"value": 0, "sub_value": 0, "end_time": None},
+            "crit_damage_boost": {"value": 0, "end_time": None},
+            "all_stats": {"value": 0, "end_time": None},
+            "exp_boost": {"value": 0, "end_time": None},
+            "shield_duration": {"value": 0, "stack": 0, "end_time": None}
         })
+
+        # 恢复减益效果
+        player.debuffs = data.get("debuffs", {
+            "poisoned": {"duration": 0, "damage": 0},
+            "stunned": {"duration": 0},
+            "burning": {"duration": 0, "damage": 0},
+            "frozen": {"duration": 0, "slow": 0},
+            "shocked": {"duration": 0, "chance": 0}
+        })
+
+        # 恢复技能冷却
+        player.skill_cooldown = data.get("skill_cooldown", 0)
+        player.battle_turn = data.get("battle_turn", 0)
+
         player.clean_expired_buffs()
 
         return player
@@ -484,19 +882,45 @@ class Player:
         buffs_info = []
         current_time = time.time()
 
-        if self.buffs["attack_boost"]["end_time"] and current_time < self.buffs["attack_boost"]["end_time"]:
-            remaining = int(self.buffs["attack_boost"]["end_time"] - current_time)
-            buffs_info.append(f"攻击提升+{int(self.buffs['attack_boost']['value'] * 100)}% ({remaining}秒)")
+        for buff_type, buff in self.buffs.items():
+            if buff["end_time"] and current_time < buff["end_time"]:
+                remaining = int(buff["end_time"] - current_time)
+                if buff_type == "attack_boost":
+                    buffs_info.append(f"攻击提升+{int(buff['value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "defense_boost":
+                    buffs_info.append(f"防御提升+{int(buff['value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "crit_boost":
+                    buffs_info.append(f"暴击率提升+{int(buff['value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "agility_boost":
+                    buffs_info.append(
+                        f"移动速度+{int(buff['value'] * 100)}%，攻击速度+{int(buff['sub_value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "mana_shield":
+                    buffs_info.append(f"法力护盾: {buff['value']}点 ({remaining}秒)")
+                elif buff_type == "element_resist":
+                    buffs_info.append(f"元素抗性+{int(buff['value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "skill_haste":
+                    buffs_info.append(f"技能冷却减少{int(buff['value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "dodge_boost":
+                    buffs_info.append(f"闪避率+{int(buff['value'] * 100)}% ({remaining}秒)")
+                elif buff_type == "life_steal":
+                    buffs_info.append(f"生命偷取+{int(buff['value'] * 100)}% ({remaining}秒)")
 
-        if self.buffs["defense_boost"]["end_time"] and current_time < self.buffs["defense_boost"]["end_time"]:
-            remaining = int(self.buffs["defense_boost"]["end_time"] - current_time)
-            buffs_info.append(f"防御提升+{int(self.buffs['defense_boost']['value'] * 100)}% ({remaining}秒)")
-
-        if self.buffs["crit_boost"]["end_time"] and current_time < self.buffs["crit_boost"]["end_time"]:
-            remaining = int(self.buffs["crit_boost"]["end_time"] - current_time)
-            buffs_info.append(f"暴击提升+{int(self.buffs['crit_boost']['value'] * 100)}% ({remaining}秒)")
+        # 构建减益信息字符串
+        debuffs_info = []
+        for debuff_type, debuff in self.debuffs.items():
+            if debuff_type == "poisoned" and debuff["duration"] > 0:
+                debuffs_info.append(f"中毒: 每回合{debuff['damage']}点伤害，剩余{debuff['duration']}回合")
+            elif debuff_type == "stunned" and debuff["duration"] > 0:
+                debuffs_info.append(f"眩晕: 无法行动，剩余{debuff['duration']}回合")
+            elif debuff_type == "burning" and debuff["duration"] > 0:
+                debuffs_info.append(f"燃烧: 每回合{debuff['damage']}点伤害，剩余{debuff['duration']}回合")
+            elif debuff_type == "frozen" and debuff["duration"] > 0:
+                debuffs_info.append(f"冰冻: 行动迟缓，剩余{debuff['duration']}回合")
+            elif debuff_type == "shocked" and debuff["duration"] > 0:
+                debuffs_info.append(f"触电: 暴击率提升，剩余{debuff['duration']}回合")
 
         buffs_text = "\n".join(buffs_info) if buffs_info else "无"
+        debuffs_text = "\n减益效果:\n" + "\n".join(debuffs_info) if debuffs_info else ""
 
         return f"{self.name} - {self.get_current_realm()['name']}{self.realm_level}级\n" + \
             f"生命值: {self.health}/{self.get_max_health()}\n" + \
@@ -505,7 +929,7 @@ class Player:
             f"暴击率: {int(self.get_critical_rate() * 100)}%\n" + \
             f"经验值: {self.experience}/{self.experience_to_next_level}\n" + \
             f"金币: {self.gold}\n" + \
-            f"当前增益:\n{buffs_text}"
+            f"当前增益:\n{buffs_text}" + debuffs_text
 
 
 class Monster:
@@ -515,7 +939,10 @@ class Monster:
         self.species = species  # 仙术使、机械种等
         self.level = level
 
-        # 根据类别和等级设置属性
+        # 伤害类型
+        self.damage_types = MONSTER_DAMAGE_EFFECTS.get(species, [])
+
+        # 根据类别和等级设置属性（调整成长曲线以平衡游戏）
         category_multipliers = {
             "基础种": 1.0,
             "精英种": 1.8,
@@ -525,15 +952,17 @@ class Monster:
         }
 
         multiplier = category_multipliers[category]
+        # 调整怪物属性成长，使后期不会过于简单
+        level_factor = 1.0 + (level - 1) * 0.12  # 略微提高后期怪物强度
 
-        self.base_health = int(80 * multiplier * (level ** 0.8))
+        self.base_health = int(80 * multiplier * (level ** 0.85))  # 提高生命值成长
         self.health = self.base_health
-        self.attack = int(8 * multiplier * (level ** 0.85))
-        self.defense = int(3 * multiplier * (level ** 0.75))
+        self.attack = int(8 * multiplier * (level ** 0.9))  # 提高攻击力成长
+        self.defense = int(3 * multiplier * (level ** 0.8))  # 提高防御力成长
 
-        # 设置经验和金币奖励
-        self.experience_reward = int(50 * multiplier * (level ** 0.9))
-        self.gold_reward = int(20 * multiplier * (level ** 0.8))
+        # 设置经验和金币奖励（前期略高，帮助玩家度过困难期）
+        self.experience_reward = int(60 * multiplier * (level ** 0.9))  # 提高前期经验
+        self.gold_reward = int(25 * multiplier * (level ** 0.8))  # 提高前期金币
 
         # 特殊能力概率
         self.special_ability_chance = 0.1 + (multiplier - 1.0) * 0.05
@@ -559,16 +988,97 @@ class Monster:
             return random.choice(abilities)
         return None
 
+    def apply_damage_effect(self, player):
+        """对玩家应用伤害效果"""
+        if not self.damage_types:
+            return []
+
+        messages = []
+        effect = random.choice(self.damage_types)
+        current_time = time.time()
+
+        # 检查玩家是否有对应抗性
+        if effect == "中毒" and (
+                player.buffs["poison_resist"]["end_time"] and current_time < player.buffs["poison_resist"]["end_time"]):
+            messages.append(f"你的中毒抵抗生效了，免疫了中毒效果！")
+            return messages
+
+        if effect == "眩晕" and (
+                player.buffs["stun_resist"]["end_time"] and current_time < player.buffs["stun_resist"]["end_time"]):
+            messages.append(f"你的眩晕抵抗生效了，免疫了眩晕效果！")
+            return messages
+
+        # 应用效果
+        if effect == "火焰":
+            damage = max(1, int(self.attack * 0.2))
+            duration = 3
+            player.debuffs["burning"] = {"duration": duration, "damage": damage}
+            messages.append(f"{self.name}对你施加了火焰效果，你将在{duration}回合内每回合受到{damage}点伤害！")
+
+        elif effect == "冰霜":
+            slow = 0.2
+            duration = 2
+            player.debuffs["frozen"] = {"duration": duration, "slow": slow}
+            messages.append(f"{self.name}对你施加了冰冻效果，你将在{duration}回合内行动迟缓！")
+
+        elif effect == "雷电":
+            chance = 0.2
+            duration = 2
+            player.debuffs["shocked"] = {"duration": duration, "chance": chance}
+            messages.append(f"{self.name}对你施加了雷电效果，你将在{duration}回合内暴击率提升{int(chance * 100)}%！")
+
+        elif effect == "中毒":
+            damage = max(1, int(self.attack * 0.15))
+            duration = 4
+            player.debuffs["poisoned"] = {"duration": duration, "damage": damage}
+            messages.append(f"{self.name}对你施加了中毒效果，你将在{duration}回合内每回合受到{damage}点伤害！")
+
+        elif effect == "眩晕":
+            duration = 1
+            player.debuffs["stunned"] = {"duration": duration}
+            messages.append(f"{self.name}对你施加了眩晕效果，你将在{duration}回合内无法行动！")
+
+        return messages
+
     def __str__(self):
+        damage_effects_text = f"伤害效果: {', '.join(self.damage_types)}" if self.damage_types else "无特殊伤害效果"
         return f"{self.name} ({self.category} - {self.species}) - 等级: {self.level}\n" + \
             f"生命值: {self.health}/{self.base_health}\n" + \
             f"攻击力: {self.attack}\n" + \
-            f"防御力: {self.defense}"
+            f"防御力: {self.defense}\n" + \
+            damage_effects_text
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "category": self.category,
+            "species": self.species,
+            "level": self.level,
+            "base_health": self.base_health,
+            "health": self.health,
+            "attack": self.attack,
+            "defense": self.defense,
+            "experience_reward": self.experience_reward,
+            "gold_reward": self.gold_reward,
+            "is_guardian": self.is_guardian
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        monster = cls(data["name"], data["category"], data["species"], data["level"])
+        monster.base_health = data["base_health"]
+        monster.health = data["health"]
+        monster.attack = data["attack"]
+        monster.defense = data["defense"]
+        monster.experience_reward = data["experience_reward"]
+        monster.gold_reward = data["gold_reward"]
+        monster.is_guardian = data["is_guardian"]
+        return monster
 
 
 # 存档和读档功能
 def save_game():
-    """保存游戏数据到浏览器localStorage"""
+    """保存游戏数据到浏览器localStorage，确保死亡状态也能保存"""
     if not st.session_state.player:
         return False
 
@@ -576,6 +1086,7 @@ def save_game():
     save_data = {
         "player": st.session_state.player.to_dict(),
         "current_area": st.session_state.current_area,
+        "current_monster": st.session_state.current_monster.to_dict() if st.session_state.current_monster else None,
         "timestamp": datetime.now().isoformat()
     }
 
@@ -612,7 +1123,7 @@ def load_game_from_localstorage():
     """, unsafe_allow_html=True)
 
     # 从URL参数获取存档数据
-    query_params = st.query_params  # 移除了括号
+    query_params = st.query_params
     if 'save_data' in query_params:
         try:
             save_json = urllib.parse.unquote(query_params['save_data'][0])
@@ -727,6 +1238,240 @@ def generate_equipment():
     return Equipment(name, equip_type, level, attack, defense, hp)
 
 
+def generate_loot():
+    """生成战利品：装备和药水"""
+    player = st.session_state.player
+    if not player:
+        return [], []
+
+    equipment = None
+    potions = []
+
+    # 生成装备的概率
+    if random.random() < 0.3:  # 30%概率获得装备
+        equipment = generate_equipment()
+
+    # 生成药水的概率
+    if random.random() < 0.4:  # 40%概率获得药水
+        potion_types = [item for item in SHOP_ITEMS if item["effect"] != "max_hp"]  # 不含生命上限药水
+        potion = random.choice(potion_types)
+        quantity = random.randint(1, 2)
+        potions.append((potion["name"], quantity))
+        player.inventory[potion["name"]] += quantity
+
+    return equipment, potions
+
+
+def process_attack():
+    """处理玩家普通攻击"""
+    player = st.session_state.player
+    monster = st.session_state.current_monster
+
+    # 检查玩家是否眩晕
+    if player.debuffs["stunned"]["duration"] > 0:
+        st.session_state.battle_log.append("你处于眩晕状态，无法攻击！")
+        # 怪物回合
+        monster_turn()
+        return
+
+    # 技能冷却减少
+    if player.skill_cooldown > 0:
+        player.skill_cooldown -= 1
+
+    # 检查闪避
+    dodge_chance = player.get_dodge_chance()
+    if random.random() < dodge_chance:
+        st.session_state.battle_log.append("你成功闪避了敌人的攻击！")
+        # 怪物回合
+        monster_turn()
+        return
+
+    # 计算伤害
+    damage = player.get_total_attack() - monster.defense // 2
+    damage = max(1, damage)
+
+    # 检查暴击
+    critical = random.random() < player.get_critical_rate()
+    if critical:
+        damage = int(damage * player.get_critical_damage())
+        st.session_state.battle_log.append("暴击！造成了额外伤害！")
+
+    # 应用生命偷取
+    current_time = time.time()
+    if player.buffs["life_steal"]["end_time"] and current_time < player.buffs["life_steal"]["end_time"]:
+        steal = int(damage * player.buffs["life_steal"]["value"])
+        player.health = min(player.health + steal, player.get_max_health())
+        st.session_state.battle_log.append(f"你偷取了{steal}点生命值！")
+
+    # 对怪物造成伤害
+    monster.health = max(0, monster.health - damage)
+    st.session_state.battle_log.append(f"你对{monster.name}造成了{damage}点伤害！")
+
+    # 检查怪物是否死亡
+    if not monster.is_alive():
+        battle_victory()
+        return
+
+    # 怪物使用特殊能力
+    special = monster.use_special_ability()
+    if special:
+        st.session_state.battle_log.append(special["message"])
+        if special["effect"] == "attack":
+            monster.attack = int(monster.attack * special["value"])
+        elif special["effect"] == "defense":
+            monster.defense = int(monster.defense * special["value"])
+        elif special["effect"] == "leech":
+            heal = int(monster.base_health * special["value"])
+            monster.health = min(monster.health + heal, monster.base_health)
+            st.session_state.battle_log.append(f"{monster.name}恢复了{heal}点生命值！")
+
+    # 怪物回合
+    monster_turn()
+
+
+def process_skill_attack():
+    """处理玩家技能攻击"""
+    player = st.session_state.player
+    monster = st.session_state.current_monster
+
+    # 检查玩家是否眩晕
+    if player.debuffs["stunned"]["duration"] > 0:
+        st.session_state.battle_log.append("你处于眩晕状态，无法使用技能！")
+        # 怪物回合
+        monster_turn()
+        return
+
+    # 使用技能
+    success, messages = player.use_skill_attack(monster)
+    if not success:
+        st.session_state.battle_log.append(messages)
+        return
+
+    st.session_state.battle_log.extend(messages)
+
+    # 检查怪物是否死亡
+    if not monster.is_alive():
+        battle_victory()
+        return
+
+    # 怪物使用特殊能力
+    special = monster.use_special_ability()
+    if special:
+        st.session_state.battle_log.append(special["message"])
+        if special["effect"] == "attack":
+            monster.attack = int(monster.attack * special["value"])
+        elif special["effect"] == "defense":
+            monster.defense = int(monster.defense * special["value"])
+        elif special["effect"] == "leech":
+            heal = int(monster.base_health * special["value"])
+            monster.health = min(monster.health + heal, monster.base_health)
+            st.session_state.battle_log.append(f"{monster.name}恢复了{heal}点生命值！")
+
+    # 怪物回合
+    monster_turn()
+
+
+def monster_turn():
+    """怪物攻击回合"""
+    player = st.session_state.player
+    monster = st.session_state.current_monster
+
+    # 更新减益效果
+    player.update_debuffs(st.session_state.battle_log)
+
+    # 检查玩家是否已死亡
+    if not player.is_alive():
+        st.session_state.battle_log.append("你被击败了！")
+        st.session_state.current_monster = None
+        return
+
+    # 检查怪物是否还活着
+    if not monster.is_alive():
+        return
+
+    # 计算伤害
+    damage = monster.attack - player.get_total_defense() // 3
+    damage = max(1, damage)
+
+    # 应用伤害减免
+    current_time = time.time()
+    if player.buffs["damage_reduction"]["end_time"] and current_time < player.buffs["damage_reduction"]["end_time"]:
+        damage = int(damage * (1 - player.buffs["damage_reduction"]["value"]))
+        damage = max(1, damage)
+
+    # 应用护盾
+    if player.buffs["mana_shield"]["end_time"] and current_time < player.buffs["mana_shield"]["end_time"]:
+        if player.buffs["mana_shield"]["value"] >= damage:
+            player.buffs["mana_shield"]["value"] -= damage
+            st.session_state.battle_log.append(
+                f"你的护盾吸收了{damage}点伤害！剩余护盾: {player.buffs['mana_shield']['value']}")
+            damage = 0
+        else:
+            damage -= player.buffs["mana_shield"]["value"]
+            st.session_state.battle_log.append(f"你的护盾被打破了，吸收了{player.buffs['mana_shield']['value']}点伤害！")
+            player.buffs["mana_shield"] = {"value": 0, "end_time": None}
+
+    # 对玩家造成伤害（允许生命值变为负数）
+    player.health = player.health - damage
+    if damage > 0:
+        st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点伤害！")
+
+    # 应用伤害反弹
+    if player.buffs["damage_reflect"]["end_time"] and current_time < player.buffs["damage_reflect"]["end_time"]:
+        reflect = int(damage * player.buffs["damage_reflect"]["value"])
+        if reflect > 0:
+            monster.health = max(0, monster.health - reflect)
+            st.session_state.battle_log.append(f"你反弹了{reflect}点伤害给{monster.name}！")
+            if not monster.is_alive():
+                battle_victory()
+                return
+
+    # 应用怪物伤害效果
+    effect_messages = monster.apply_damage_effect(player)
+    st.session_state.battle_log.extend(effect_messages)
+
+    # 检查玩家是否已死亡
+    if not player.is_alive():
+        st.session_state.battle_log.append("你被击败了！")
+        st.session_state.current_monster = None
+
+    # 增加战斗回合数
+    player.battle_turn += 1
+
+
+def battle_victory():
+    """战斗胜利处理"""
+    player = st.session_state.player
+    monster = st.session_state.current_monster
+
+    st.session_state.battle_log.append(f"你成功击败了{monster.name}！")
+
+    # 获得经验
+    exp_messages = player.gain_experience(monster.experience_reward)
+    st.session_state.battle_log.extend(exp_messages)
+    st.session_state.battle_log.append(f"获得了{monster.experience_reward}点经验值！")
+
+    # 获得金币
+    player.gold += monster.gold_reward
+    st.session_state.battle_log.append(f"获得了{monster.gold_reward}枚金币！")
+
+    # 生成战利品
+    equipment, potions = generate_loot()
+    if equipment:
+        player.equipment_inventory.append(equipment)
+        st.session_state.battle_log.append(f"获得了装备: {equipment.name}！")
+    for potion_name, quantity in potions:
+        st.session_state.battle_log.append(f"获得了{quantity}瓶{potion_name}！")
+
+    # 重置技能冷却和战斗回合
+    player.skill_cooldown = 0
+    player.battle_turn = 0
+
+    # 清除战斗状态
+    st.session_state.current_monster = None
+    st.session_state.current_view = "main"
+
+
 def show_create_view():
     """角色创建界面"""
     st.title("修仙打怪升级游戏")
@@ -755,6 +1500,9 @@ def show_create_view():
                 try:
                     st.session_state.player = Player.from_dict(st.session_state.save_data["player"])
                     st.session_state.current_area = st.session_state.save_data["current_area"]
+                    monster_data = st.session_state.save_data.get("current_monster")
+                    if monster_data:
+                        st.session_state.current_monster = Monster.from_dict(monster_data)
                     st.session_state.current_view = "main"
                     st.success("存档加载成功！")
                     time.sleep(1)
@@ -788,7 +1536,7 @@ def show_main_view():
 
     # 区域信息
     st.subheader(f"当前区域：{st.session_state.current_area}")
-    st.write("在这个区域中，你可能会遇到各种怪物，击败它们可以获得经验、金币和装备！")
+    st.write("在这个区域中，你可能会遇到各种怪物，击败它们可以获得经验、金币、装备和药水！")
 
     # 操作按钮（探索和区域移动）
     col1, col2 = st.columns(2)
@@ -800,6 +1548,9 @@ def show_main_view():
                 monster = generate_monster()
                 st.session_state.current_monster = monster
                 st.session_state.battle_log = [f"你在区域 {st.session_state.current_area} 遇到了 {monster.name}！"]
+                # 重置战斗相关状态
+                player.skill_cooldown = 0  # 战斗开始时技能可用
+                player.battle_turn = 0
                 st.session_state.current_view = "battle"
                 st.rerun()
     with col2:
@@ -882,6 +1633,9 @@ def show_battle_view():
         st.text(f"生命值: {player.health}/{player.get_max_health()}")
         st.text(f"攻击力: {player.get_total_attack()}")
         st.text(f"防御力: {player.get_total_defense()}")
+        st.text(f"暴击率: {int(player.get_critical_rate() * 100)}%")
+        if player.skill_cooldown > 0:
+            st.text(f"技能冷却: {player.skill_cooldown}回合")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
@@ -890,6 +1644,7 @@ def show_battle_view():
         st.text(f"生命值: {monster.health}/{monster.base_health}")
         st.text(f"攻击力: {monster.attack}")
         st.text(f"防御力: {monster.defense}")
+        st.text(f"伤害类型: {', '.join(monster.damage_types) if monster.damage_types else '无'}")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # 战斗日志
@@ -904,170 +1659,87 @@ def show_battle_view():
             process_attack()
             st.rerun()
     with col2:
+        # 技能攻击按钮（根据冷却状态禁用）
+        skill_disabled = player.skill_cooldown > 0
+        if st.button("技能攻击", use_container_width=True, disabled=skill_disabled):
+            if not skill_disabled:
+                process_skill_attack()
+                st.rerun()
+
+    # 使用药水和逃跑按钮
+    col3, col4 = st.columns(2)
+    with col3:
         if st.button("使用药水", use_container_width=True):
             show_battle_items()
             return
+    with col4:
+        if st.button("尝试逃跑", use_container_width=True):
+            # 考虑敏捷加成影响逃跑成功率
+            escape_chance = 0.5
+            current_time = time.time()
+            if player.buffs["agility_boost"]["end_time"] and current_time < player.buffs["agility_boost"]["end_time"]:
+                escape_chance += 0.2  # 敏捷加成提高逃跑成功率
 
-    # 逃跑按钮
-    if st.button("尝试逃跑", use_container_width=True):
-        if random.random() < 0.5:  # 50%逃跑成功率
-            st.session_state.battle_log.append("你成功逃脱了！")
-            st.session_state.current_monster = None
-            st.session_state.current_view = "main"
-        else:
-            st.session_state.battle_log.append("逃跑失败，被怪物反击！")
-            # 怪物攻击
-            damage = max(1, monster.attack - player.get_total_defense() // 3)
-            player.health -= damage
-            st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点伤害！")
-
-            if not player.is_alive():
-                st.session_state.battle_log.append("你被击败了！")
+            if random.random() < escape_chance:  # 基础50%逃跑成功率
+                st.session_state.battle_log.append("你成功逃脱了！")
                 st.session_state.current_monster = None
                 st.session_state.current_view = "main"
+            else:
+                st.session_state.battle_log.append("逃跑失败，被怪物反击！")
+                # 怪物攻击
+                damage = max(1, monster.attack - player.get_total_defense() // 3)
+                player.health = player.health - damage  # 允许生命值变为负数
+                st.session_state.battle_log.append(f"{monster.name}对你造成了{damage}点伤害！")
 
-        st.rerun()
+                if not player.is_alive():
+                    st.session_state.battle_log.append("你被击败了！")
+                    st.session_state.current_monster = None
+                    st.session_state.current_view = "main"
+
+            st.rerun()
 
 
 def show_battle_items():
-    """战斗中使用物品界面"""
-    st.title("战斗中使用物品")
-
+    """战斗中显示可用物品"""
+    st.subheader("选择要使用的物品")
     player = st.session_state.player
+
+    # 按类别分组显示药水
+    buff_items = [item for item in SHOP_ITEMS if item["effect"] not in ["max_hp", "heal", "full_heal"]]
+    heal_items = [item for item in SHOP_ITEMS if item["effect"] in ["heal", "full_heal"]]
+
+    st.write("恢复类:")
+    cols = st.columns(2)
+    for i, item in enumerate(heal_items):
+        if player.inventory.get(item["name"], 0) > 0:
+            with cols[i % 2]:
+                if st.button(f"{item['name']} (x{player.inventory[item['name']]}) - {item['description']}",
+                             use_container_width=True):
+                    success, msg = player.use_item(item["name"])
+                    st.session_state.battle_log.append(msg)
+                    st.success(msg)
+                    time.sleep(1)
+                    st.rerun()
+
+    st.write("增益类:")
+    cols = st.columns(2)
+    for i, item in enumerate(buff_items):
+        if player.inventory.get(item["name"], 0) > 0:
+            with cols[i % 2]:
+                if st.button(f"{item['name']} (x{player.inventory[item['name']]}) - {item['description']}",
+                             use_container_width=True):
+                    success, msg = player.use_item(item["name"])
+                    st.session_state.battle_log.append(msg)
+                    st.success(msg)
+                    time.sleep(1)
+                    st.rerun()
 
     if st.button("返回战斗", use_container_width=True):
         st.rerun()
 
-    st.subheader("可用物品")
-    has_items = False
-    for item in SHOP_ITEMS:
-        count = player.inventory.get(item["name"], 0)
-        if count > 0:
-            has_items = True
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col1:
-                st.write(f"**{item['name']}**：{item['description']}")
-            with col2:
-                st.write(f"数量: {count}")
-            with col3:
-                if st.button(f"使用", key=f"battle_use_{item['name']}", use_container_width=True):
-                    success, msg = player.use_item(item["name"])
-                    st.session_state.battle_log.append(msg)
-                    st.rerun()
-
-    if not has_items:
-        st.info("背包中没有可用物品")
-
-
-def process_attack():
-    """处理攻击逻辑"""
-    player = st.session_state.player
-    monster = st.session_state.current_monster
-
-    # 检查状态
-    if not player.is_alive():
-        st.session_state.battle_log.append("你已经失去战斗能力！")
-        return
-
-    if not monster.is_alive():
-        return
-
-    # 怪物使用特殊能力
-    special_ability = monster.use_special_ability()
-    special_attack = False
-    if special_ability:
-        st.session_state.battle_log.append(special_ability["message"])
-        if special_ability["effect"] == "attack":
-            monster.attack = int(monster.attack * special_ability["value"])
-        elif special_ability["effect"] == "defense":
-            monster.defense = int(monster.defense * special_ability["value"])
-        elif special_ability["effect"] == "leech":
-            heal_amount = int(monster.base_health * special_ability["value"])
-            monster.health = min(monster.health + heal_amount, monster.base_health)
-            st.session_state.battle_log.append(f"{monster.name}恢复了{heal_amount}点生命值！")
-        elif special_ability["effect"] == "crit":
-            special_attack = True
-
-    # 玩家攻击
-    player_attack = player.get_total_attack()
-    damage_to_monster = max(1, player_attack - monster.defense // 2)
-
-    # 检查是否暴击
-    if random.random() < player.get_critical_rate():
-        damage_to_monster = int(damage_to_monster * player.critical_damage)
-        st.session_state.battle_log.append(f"你对{monster.name}发动了暴击！造成了{damage_to_monster}点伤害！")
-    else:
-        st.session_state.battle_log.append(f"你对{monster.name}造成了{damage_to_monster}点伤害！")
-
-    monster.health -= damage_to_monster
-
-    # 检查怪物是否被击败
-    if not monster.is_alive():
-        st.session_state.battle_log.append(f"你成功击败了{monster.name}！")
-
-        # 获得经验
-        exp_messages = player.gain_experience(monster.experience_reward)
-        for msg in exp_messages:
-            st.session_state.battle_log.append(msg)
-
-        # 获得金币
-        player.gold += monster.gold_reward
-        st.session_state.battle_log.append(f"获得了{monster.gold_reward}金币！")
-
-        # 随机掉落装备
-        if random.random() < 0.3 + (monster.level * 0.01):
-            equipment = generate_equipment()
-            if equipment:
-                player.equipment_inventory.append(equipment)
-                st.session_state.battle_log.append(f"获得了装备: {equipment.name}！")
-
-        # 随机掉落物品
-        if random.random() < 0.25:
-            item = random.choice(SHOP_ITEMS)
-            player.inventory[item["name"]] += 1
-            st.session_state.battle_log.append(f"获得了{item['name']}！")
-
-        # 战斗结束，返回主界面
-        st.session_state.current_monster = None
-        st.session_state.current_view = "main"
-        return
-
-    # 怪物反击
-    monster_attack = monster.attack
-    damage_to_player = max(1, monster_attack - player.get_total_defense() // 3)
-
-    # 特殊攻击必定暴击
-    if special_attack:
-        damage_to_player = int(damage_to_player * 1.5)
-        st.session_state.battle_log.append(f"{monster.name}对你发动了要害打击！造成了{damage_to_player}点伤害！")
-    else:
-        st.session_state.battle_log.append(f"{monster.name}对你造成了{damage_to_player}点伤害！")
-
-    player.health -= damage_to_player
-
-    # 检查玩家是否被击败
-    if not player.is_alive():
-        st.session_state.battle_log.append("你被击败了！损失了部分金币和经验。")
-
-        # 惩罚机制
-        lose_gold = max(10, int(player.gold * 0.1))
-        player.gold = max(0, player.gold - lose_gold)
-
-        lose_exp = max(0, int(player.experience * 0.05))
-        player.experience = max(0, player.experience - lose_exp)
-
-        st.session_state.battle_log.append(f"损失了{lose_gold}金币和{lose_exp}经验值！")
-
-        # 重置生命值为1
-        player.health = 1
-
-        # 战斗结束，返回主界面
-        st.session_state.current_monster = None
-        st.session_state.current_view = "main"
-
 
 def show_shop_view():
-    """商店界面"""
+    """商店界面：显示可购买的物品"""
     st.title("修仙商店")
 
     if not st.session_state.player:
@@ -1076,37 +1748,82 @@ def show_shop_view():
 
     player = st.session_state.player
 
-    # 返回按钮
+    st.subheader(f"当前金币: {player.gold}")
+
+    # 返回主界面按钮
     if st.button("返回主界面", use_container_width=True):
         st.session_state.current_view = "main"
         st.rerun()
 
-    # 显示当前金币
-    st.subheader(f"当前金币: {player.gold}")
-
-    # 商品列表
-    st.subheader("可购买物品")
-    for item in SHOP_ITEMS:
-        col1, col2, col3 = st.columns([3, 1, 1])
-        with col1:
-            st.write(f"**{item['name']}**：{item['description']}")
-        with col2:
-            st.write(f"价格: {item['price']}")
-        with col3:
-            if st.button("购买", key=f"buy_{item['name']}", use_container_width=True):
-                if player.gold >= item["price"]:
-                    player.gold -= item["price"]
-                    player.inventory[item["name"]] += 1
-                    st.session_state.battle_log.append(f"购买了{item['name']}")
-                    st.success(f"成功购买{item['name']}！")
+    # 按类别分组显示商品
+    st.subheader("恢复类")
+    recovery_items = [item for item in SHOP_ITEMS if item["effect"] in ["max_hp", "heal", "full_heal"]]
+    cols = st.columns(2)
+    for i, item in enumerate(recovery_items):
+        with cols[i % 2]:
+            st.markdown(f"**{item['name']}** - {item['price']}金币")
+            st.write(item['description'])
+            if st.button(f"购买 {item['name']}", use_container_width=True):
+                if player.gold >= item['price']:
+                    player.gold -= item['price']
+                    player.inventory[item['name']] += 1
+                    st.success(f"成功购买 {item['name']}！")
+                    st.session_state.battle_log.append(f"购买了{item['name']}，花费了{item['price']}金币")
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("金币不足，无法购买")
+                    st.error("金币不足，无法购买！")
+            st.write("---")
+
+    st.subheader("战斗增益类")
+    battle_items = [item for item in SHOP_ITEMS if item["effect"] in ["attack_boost", "defense_boost", "crit_boost",
+                                                                      "agility_boost", "skill_haste", "dodge_boost",
+                                                                      "life_steal", "damage_reduction",
+                                                                      "damage_reflect",
+                                                                      "crit_damage_boost", "all_stats"]]
+    cols = st.columns(2)
+    for i, item in enumerate(battle_items):
+        with cols[i % 2]:
+            st.markdown(f"**{item['name']}** - {item['price']}金币")
+            st.write(item['description'])
+            if st.button(f"购买 {item['name']}", use_container_width=True):
+                if player.gold >= item['price']:
+                    player.gold -= item['price']
+                    player.inventory[item['name']] += 1
+                    st.success(f"成功购买 {item['name']}！")
+                    st.session_state.battle_log.append(f"购买了{item['name']}，花费了{item['price']}金币")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("金币不足，无法购买！")
+            st.write("---")
+
+    st.subheader("元素与特殊效果类")
+    element_items = [item for item in SHOP_ITEMS if item["effect"] in ["mana_shield", "element_resist",
+                                                                       "element_penetration", "shield_boost",
+                                                                       "fire_damage", "frost_damage", "thunder_damage",
+                                                                       "poison_resist", "stun_resist", "invisibility",
+                                                                       "exp_boost", "shield_duration"]]
+    cols = st.columns(2)
+    for i, item in enumerate(element_items):
+        with cols[i % 2]:
+            st.markdown(f"**{item['name']}** - {item['price']}金币")
+            st.write(item['description'])
+            if st.button(f"购买 {item['name']}", use_container_width=True):
+                if player.gold >= item['price']:
+                    player.gold -= item['price']
+                    player.inventory[item['name']] += 1
+                    st.success(f"成功购买 {item['name']}！")
+                    st.session_state.battle_log.append(f"购买了{item['name']}，花费了{item['price']}金币")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("金币不足，无法购买！")
+            st.write("---")
 
 
 def show_backpack_view():
-    """背包界面"""
+    """背包界面：显示物品和装备"""
     st.title("背包")
 
     if not st.session_state.player:
@@ -1115,104 +1832,119 @@ def show_backpack_view():
 
     player = st.session_state.player
 
-    # 返回按钮
+    # 返回主界面按钮
     if st.button("返回主界面", use_container_width=True):
         st.session_state.current_view = "main"
         st.rerun()
 
-    # 物品标签页
+    # 物品标签页和装备标签页
     tab1, tab2 = st.tabs(["消耗品", "装备"])
 
     with tab1:
         st.subheader("消耗品")
-        has_items = False
+        # 按类别分组显示物品
+        items_by_type = {}
         for item in SHOP_ITEMS:
-            count = player.inventory.get(item["name"], 0)
-            if count > 0:
-                has_items = True
-                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-                with col1:
-                    st.write(f"**{item['name']}**：{item['description']}")
-                with col2:
-                    st.write(f"数量: {count}")
-                with col3:
-                    if st.button("使用", key=f"use_{item['name']}", use_container_width=True):
-                        success, msg = player.use_item(item["name"])
-                        st.session_state.battle_log.append(msg)
-                        st.success(msg)
-                        time.sleep(1)
-                        st.rerun()
-                with col4:
-                    # 售价为购买价的一半
-                    sell_price = item["price"] // 2
-                    if st.button(f"出售({sell_price})", key=f"sell_{item['name']}", use_container_width=True):
-                        player.inventory[item["name"]] -= 1
-                        player.gold += sell_price
-                        st.session_state.battle_log.append(f"出售了{item['name']}，获得{sell_price}金币")
-                        st.success(f"成功出售{item['name']}，获得{sell_price}金币！")
-                        time.sleep(1)
-                        st.rerun()
+            if player.inventory.get(item["name"], 0) > 0:
+                if item["effect"] in ["max_hp", "heal", "full_heal"]:
+                    category = "恢复类"
+                elif item["effect"] in ["attack_boost", "defense_boost", "crit_boost",
+                                        "agility_boost", "skill_haste", "dodge_boost",
+                                        "life_steal", "damage_reduction", "damage_reflect",
+                                        "crit_damage_boost", "all_stats"]:
+                    category = "战斗增益类"
+                else:
+                    category = "元素与特殊效果类"
 
-        if not has_items:
-            st.info("背包中没有消耗品")
+                if category not in items_by_type:
+                    items_by_type[category] = []
+                items_by_type[category].append(item)
+
+        for category, items in items_by_type.items():
+            st.markdown(f"### {category}")
+            cols = st.columns(2)
+            for i, item in enumerate(items):
+                if player.inventory.get(item["name"], 0) > 0:
+                    with cols[i % 2]:
+                        st.markdown(f"**{item['name']}** (x{player.inventory[item['name']]})")
+                        st.write(item['description'])
+                        if st.button(f"使用 {item['name']}", use_container_width=True):
+                            success, msg = player.use_item(item["name"])
+                            st.success(msg)
+                            st.session_state.battle_log.append(msg)
+                            time.sleep(1)
+                            st.rerun()
+                    st.write("---")
+
+        # 如果没有物品
+        if not items_by_type:
+            st.info("你的背包中没有消耗品")
 
     with tab2:
-        st.subheader("装备")
-
-        # 当前装备
-        st.subheader("当前装备")
+        st.subheader("已装备")
+        # 显示当前装备
         for eq_type in EQUIPMENT_TYPES:
-            eq = player.equipped[eq_type]
+            eq = player.equipped.get(eq_type)
+            st.markdown(f"**{eq_type}**")
             if eq:
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.write(
-                        f"**{eq_type}**: {eq.name} (攻击+{eq.attack_bonus}, 防御+{eq.defense_bonus}, 生命+{eq.hp_bonus})")
-                with col2:
-                    if st.button(f"卸下", key=f"unequip_{eq_type}", use_container_width=True):
-                        unequipped = player.equip_item(None)
-                        player.equipment_inventory.append(unequipped)
-                        st.success(f"已卸下{unequipped.name}")
-                        time.sleep(1)
-                        st.rerun()
+                st.markdown('<div class="status-card">', unsafe_allow_html=True)
+                st.text(str(eq))
+                if st.button(f"卸下 {eq.name}", use_container_width=True):
+                    # 卸下装备，放入背包
+                    unequipped = player.equip_item(None)
+                    player.equipment_inventory.append(unequipped)
+                    st.success(f"已卸下 {eq.name}")
+                    st.session_state.battle_log.append(f"卸下了{eq.name}")
+                    time.sleep(1)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
-                st.write(f"**{eq_type}**: 未装备")
+                st.write("未装备")
+            st.write("---")
 
-        # 装备库存
-        st.subheader("背包中的装备")
+        st.subheader("装备背包")
+        # 显示背包中的装备
         if player.equipment_inventory:
+            cols = st.columns(1)
             for i, eq in enumerate(player.equipment_inventory):
-                col1, col2, col3 = st.columns([4, 1, 1])
-                with col1:
-                    st.write(
-                        f"{eq.name} (等级: {eq.level}) - 攻击+{eq.attack_bonus}, 防御+{eq.defense_bonus}, 生命+{eq.hp_bonus}")
-                with col2:
-                    current_eq = player.equipped[eq.type]
-                    if current_eq:
-                        if eq.get_overall_score() > current_eq.get_overall_score():
-                            st.button(f"装备", key=f"equip_{i}", use_container_width=True)
-                        else:
-                            st.button(f"装备(较差)", key=f"equip_{i}", use_container_width=True, disabled=True)
-                    else:
-                        st.button(f"装备", key=f"equip_{i}", use_container_width=True)
-                with col3:
-                    sell_price = eq.get_sell_price()
-                    if st.button(f"出售({sell_price})", key=f"sell_eq_{i}", use_container_width=True):
-                        player.gold += sell_price
-                        del player.equipment_inventory[i]
-                        st.session_state.battle_log.append(f"出售了{eq.name}，获得{sell_price}金币")
-                        st.success(f"成功出售{eq.name}，获得{sell_price}金币！")
-                        time.sleep(1)
-                        st.rerun()
+                with cols[i % 1]:
+                    st.markdown(f"**{eq.name}** (等级: {eq.level})")
+                    st.markdown('<div class="status-card">', unsafe_allow_html=True)
+                    st.text(str(eq))
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        if st.button(f"装备 {eq.name}", use_container_width=True):
+                            # 装备物品，替换当前装备
+                            current_eq = player.equip_item(eq)
+                            # 从背包中移除
+                            player.equipment_inventory.pop(i)
+                            # 如果有被替换的装备，放入背包
+                            if current_eq:
+                                player.equipment_inventory.append(current_eq)
+                            st.success(f"已装备 {eq.name}")
+                            st.session_state.battle_log.append(f"装备了{eq.name}")
+                            time.sleep(1)
+                            st.rerun()
+                    with col_b:
+                        sell_price = eq.get_sell_price()
+                        if st.button(f"出售 (${sell_price})", use_container_width=True):
+                            # 出售装备
+                            player.gold += sell_price
+                            player.equipment_inventory.pop(i)
+                            st.success(f"已出售 {eq.name}，获得 {sell_price} 金币")
+                            st.session_state.battle_log.append(f"出售了{eq.name}，获得{sell_price}金币")
+                            time.sleep(1)
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+                st.write("---")
         else:
-            st.info("背包中没有装备")
+            st.info("你的背包中没有备用装备")
 
 
-# 主游戏循环
 def main():
+    # 初始化游戏并显示对应界面
     init_game()
 
-    # 根据当前视图显示不同界面
     if st.session_state.current_view == "create":
         show_create_view()
     elif st.session_state.current_view == "main":
