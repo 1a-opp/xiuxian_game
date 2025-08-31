@@ -612,7 +612,7 @@ def load_game_from_localstorage():
     """, unsafe_allow_html=True)
 
     # 从URL参数获取存档数据
-    query_params = st.query_params()
+    query_params = st.query_params  # 移除了括号
     if 'save_data' in query_params:
         try:
             save_json = urllib.parse.unquote(query_params['save_data'][0])
