@@ -683,7 +683,7 @@ def show_create_view():
                 st.session_state.current_view = "main"
                 st.success(f"角色 {name.strip()} 创建成功！")
                 time.sleep(1)
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("请输入有效的角色名")
 
@@ -696,7 +696,7 @@ def show_create_view():
                     st.session_state.current_view = "main"
                     st.success("存档加载成功！")
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
                 except:
                     st.error("存档损坏，无法加载")
             else:
@@ -713,7 +713,7 @@ def show_main_view():
 
     if not st.session_state.player:
         st.session_state.current_view = "create"
-        st.experimental_rerun()
+        st.rerun()
 
     player = st.session_state.player
     player.clean_expired_buffs()
@@ -739,7 +739,7 @@ def show_main_view():
                 st.session_state.current_monster = monster
                 st.session_state.battle_log = [f"你在区域 {st.session_state.current_area} 遇到了 {monster.name}！"]
                 st.session_state.current_view = "battle"
-                st.experimental_rerun()
+                st.rerun()
     with col2:
         if st.button("前往下一个区域", use_container_width=True):
             # 检查是否是区域守护者且未被击败
@@ -764,7 +764,7 @@ def show_main_view():
                     st.session_state.battle_log.append(msg)
                     st.success(msg)
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
 
     # 功能按钮
     st.subheader("功能菜单")
@@ -772,11 +772,11 @@ def show_main_view():
     with col3:
         if st.button("商店", use_container_width=True):
             st.session_state.current_view = "shop"
-            st.experimental_rerun()
+            st.rerun()
     with col4:
         if st.button("背包", use_container_width=True):
             st.session_state.current_view = "backpack"
-            st.experimental_rerun()
+            st.rerun()
     with col5:
         if st.button("保存游戏", use_container_width=True):
             save_game()
@@ -794,7 +794,7 @@ def show_battle_view():
 
     if not st.session_state.player:
         st.session_state.current_view = "create"
-        st.experimental_rerun()
+        st.rerun()
 
     player = st.session_state.player
     monster = st.session_state.current_monster
@@ -803,7 +803,7 @@ def show_battle_view():
         st.write("战斗已结束，返回主界面继续探索吧！")
         if st.button("返回主界面", use_container_width=True):
             st.session_state.current_view = "main"
-            st.experimental_rerun()
+            st.rerun()
         return
 
     # 显示双方状态
@@ -834,7 +834,7 @@ def show_battle_view():
     with col1:
         if st.button("普通攻击", use_container_width=True):
             process_attack()
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button("使用药水", use_container_width=True):
             show_battle_items()
@@ -858,7 +858,7 @@ def show_battle_view():
                 st.session_state.current_monster = None
                 st.session_state.current_view = "main"
 
-        st.experimental_rerun()
+        st.rerun()
 
 
 def show_battle_items():
@@ -868,7 +868,7 @@ def show_battle_items():
     player = st.session_state.player
 
     if st.button("返回战斗", use_container_width=True):
-        st.experimental_rerun()
+        st.rerun()
 
     st.subheader("可用物品")
     has_items = False
@@ -885,7 +885,7 @@ def show_battle_items():
                 if st.button(f"使用", key=f"battle_use_{item['name']}", use_container_width=True):
                     success, msg = player.use_item(item["name"])
                     st.session_state.battle_log.append(msg)
-                    st.experimental_rerun()
+                    st.rerun()
 
     if not has_items:
         st.info("背包中没有可用物品")
@@ -976,14 +976,14 @@ def show_shop_view():
 
     if not st.session_state.player:
         st.session_state.current_view = "create"
-        st.experimental_rerun()
+        st.rerun()
 
     player = st.session_state.player
 
     # 返回按钮
     if st.button("返回主界面", use_container_width=True):
         st.session_state.current_view = "main"
-        st.experimental_rerun()
+        st.rerun()
 
     st.subheader(f"当前金币：{player.gold}")
 
@@ -1004,7 +1004,7 @@ def show_shop_view():
                     else:
                         st.error("金币不足，无法购买！")
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
 
 
 def show_backpack_view():
@@ -1013,14 +1013,14 @@ def show_backpack_view():
 
     if not st.session_state.player:
         st.session_state.current_view = "create"
-        st.experimental_rerun()
+        st.rerun()
 
     player = st.session_state.player
 
     # 返回按钮
     if st.button("返回主界面", use_container_width=True):
         st.session_state.current_view = "main"
-        st.experimental_rerun()
+        st.rerun()
 
     st.subheader(f"当前金币：{player.gold}")
 
@@ -1055,7 +1055,7 @@ def show_backpack_view():
                 st.success(f"成功出售{len(sold_items)}件装备，获得{total_gold}金币！")
                 st.session_state.battle_log.append(f"出售了{len(sold_items)}件装备，获得{total_gold}金币")
                 time.sleep(1)
-                st.experimental_rerun()
+                st.rerun()
 
         st.subheader("已装备")
         for eq_type, equipment in player.equipped.items():
@@ -1083,7 +1083,7 @@ def show_backpack_view():
                         st.success(f"已装备{equipment.name}！")
                         st.session_state.battle_log.append(f"装备了{equipment.name}")
                         time.sleep(1)
-                        st.experimental_rerun()
+                        st.rerun()
                 with col3:
                     price = equipment.get_sell_price()
                     if st.button(f"出售 (¥{price})", key=f"sell_{i}", use_container_width=True):
@@ -1092,7 +1092,7 @@ def show_backpack_view():
                         st.success(f"成功出售{equipment.name}，获得{price}金币！")
                         st.session_state.battle_log.append(f"出售了{equipment.name}，获得{price}金币")
                         time.sleep(1)
-                        st.experimental_rerun()
+                        st.rerun()
 
     with tab2:
         st.subheader("药水列表")
@@ -1115,7 +1115,7 @@ def show_backpack_view():
                         else:
                             st.error(msg)
                         time.sleep(1)
-                        st.experimental_rerun()
+                        st.rerun()
 
         if not has_items:
             st.info("背包中没有药水")
